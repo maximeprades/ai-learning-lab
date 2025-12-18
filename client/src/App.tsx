@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, X } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, X, ChevronLeft, ChevronRight } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -282,17 +282,41 @@ function App() {
       </footer>
 
       <Dialog open={modalImage !== null} onOpenChange={() => setModalImage(null)}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+        <DialogContent className="max-w-5xl w-[95vw] p-0 overflow-hidden">
           {modalImage && (
             <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIndex = scenarios.findIndex(s => s.id === modalImage.id);
+                  const prevIndex = currentIndex === 0 ? scenarios.length - 1 : currentIndex - 1;
+                  const prev = scenarios[prevIndex];
+                  setModalImage({ id: prev.id, image: prev.image, text: prev.text });
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentIndex = scenarios.findIndex(s => s.id === modalImage.id);
+                  const nextIndex = currentIndex === scenarios.length - 1 ? 0 : currentIndex + 1;
+                  const next = scenarios[nextIndex];
+                  setModalImage({ id: next.id, image: next.image, text: next.text });
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
               <img
                 src={modalImage.image}
                 alt={modalImage.text}
-                className="w-full h-auto max-h-[70vh] object-contain"
+                className="w-full h-auto max-h-[80vh] object-contain bg-gray-100"
               />
               <div className="p-4 bg-white">
-                <p className="text-sm font-medium text-gray-800">
-                  <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-bold mr-2">
+                <p className="text-base font-medium text-gray-800">
+                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
                     #{modalImage.id}
                   </span>
                   {modalImage.text}
