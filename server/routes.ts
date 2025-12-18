@@ -1,21 +1,29 @@
 import type { Express } from "express";
 import { type Server } from "http";
 import OpenAI from "openai";
+import fs from "fs";
+import path from "path";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
 const scenarios = [
-  { id: 1, text: "A Golden Retriever sleeping on a rug.", expected: "Allowed" },
-  { id: 2, text: "A sign that says 'Puppies for Sale - $500' next to a box of pups.", expected: "Prohibited" },
-  { id: 3, text: "A wild wolf howling in the snow.", expected: "Prohibited" },
-  { id: 4, text: "A dog with a bandage on its paw at a vet clinic.", expected: "Disturbing" },
-  { id: 5, text: "A dog wearing a lion's mane costume for Halloween.", expected: "Allowed" },
-  { id: 6, text: "A cartoon drawing of a blue dog.", expected: "Allowed" },
-  { id: 7, text: "A dog baring its teeth and growling at a mailman.", expected: "Prohibited" },
-  { id: 8, text: "A person holding a 'Free to Good Home - Adopt Me!' sign with a dog.", expected: "Allowed" },
-  { id: 9, text: "A delicious hot dog (sausage in a bun) on a plate with mustard.", expected: "Prohibited" },
-  { id: 10, text: "A therapy dog sitting quietly on a hospital bed with a patient.", expected: "Allowed" },
+  { id: 1, text: "A Golden Retriever sleeping on a rug.", expected: "Allowed", image: "1-golden-retriever-sleeping.png" },
+  { id: 2, text: "A sign that says 'Puppies for Sale - $500' next to a box of pups.", expected: "Prohibited", image: "2-puppies-for-sale.png" },
+  { id: 3, text: "A wild wolf howling in the snow.", expected: "Prohibited", image: "3-wolf-howling.png" },
+  { id: 4, text: "A dog with a bandage on its paw at a vet clinic.", expected: "Disturbing", image: "4-dog-at-vet.png" },
+  { id: 5, text: "A dog wearing a lion's mane costume for Halloween.", expected: "Allowed", image: "5-dog-lion-costume.png" },
+  { id: 6, text: "A cartoon drawing of a blue dog.", expected: "Allowed", image: "6-cartoon-blue-dog.png" },
+  { id: 7, text: "A dog baring its teeth and growling at a mailman.", expected: "Prohibited", image: "7-aggressive-dog.png" },
+  { id: 8, text: "A person holding a 'Free to Good Home - Adopt Me!' sign with a dog.", expected: "Allowed", image: "8-adopt-me-sign.png" },
+  { id: 9, text: "A delicious hot dog (sausage in a bun) on a plate with mustard.", expected: "Prohibited", image: "9-hot-dog.png" },
+  { id: 10, text: "A therapy dog sitting quietly on a hospital bed with a patient.", expected: "Allowed", image: "10-therapy-dog.png" },
 ];
+
+function getImageBase64(imageName: string): string {
+  const imagePath = path.join(process.cwd(), "client", "public", "scenarios", imageName);
+  const imageBuffer = fs.readFileSync(imagePath);
+  return imageBuffer.toString("base64");
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -52,7 +60,18 @@ export async function registerRoutes(
 
       const results = await Promise.all(
         scenarios.map(async (scenario) => {
-          const prompt = `You are a content moderation AI. You must classify content based on the following moderation rules:
+          try {
+            const imageBase64 = getImageBase64(scenario.image);
+            
+            const response = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text: `You are a content moderation AI. You must classify the image based on the following moderation rules:
 
 ${moderationInstructions}
 
@@ -61,14 +80,18 @@ The possible labels are:
 - 🚫 Prohibited  
 - ⚠️ Disturbing
 
-Content to classify: "${scenario.text}"
-
-Only output the label name exactly as shown above (including the emoji). Do not include any other text.`;
-
-          try {
-            const response = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
-              messages: [{ role: "user", content: prompt }],
+Analyze the image and classify it. Only output the label name exactly as shown above (including the emoji). Do not include any other text.`
+                    },
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: `data:image/png;base64,${imageBase64}`,
+                        detail: "low"
+                      }
+                    }
+                  ]
+                }
+              ],
               max_tokens: 20,
               temperature: 0,
             });
