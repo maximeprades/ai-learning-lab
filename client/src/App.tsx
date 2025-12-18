@@ -122,9 +122,6 @@ function App() {
                   <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                     #{scenario.id}
                   </div>
-                  <div className={`absolute bottom-1 right-1 text-xs px-2 py-0.5 rounded-full font-medium border ${getLabelColor(scenario.expected)}`}>
-                    {getLabelEmoji(scenario.expected)} {scenario.expected}
-                  </div>
                   {selectedImage === scenario.id && (
                     <div className="absolute inset-0 bg-black/80 rounded-lg flex items-center justify-center p-2">
                       <p className="text-white text-xs text-center leading-tight">{scenario.text}</p>
