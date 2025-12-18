@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { type Server } from "http";
 import OpenAI from "openai";
 
+const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
+
 const scenarios = [
   { id: 1, text: "A Golden Retriever sleeping on a rug.", expected: "Allowed" },
   { id: 2, text: "A sign that says 'Puppies for Sale - $500' next to a box of pups.", expected: "Prohibited" },
@@ -22,6 +24,15 @@ export async function registerRoutes(
   
   app.get("/api/scenarios", (_req, res) => {
     res.json(scenarios.map(s => ({ id: s.id, text: s.text })));
+  });
+
+  app.post("/api/verify-teacher", (req, res) => {
+    const { password } = req.body;
+    if (password === TEACHER_PASSWORD) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false, error: "Invalid password" });
+    }
   });
 
   app.post("/api/run-test", async (req, res) => {

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -40,6 +41,39 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<{ id: number; image: string; text: string } | null>(null);
+  const [isTeacherMode, setIsTeacherMode] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  const verifyTeacherPassword = async () => {
+    try {
+      const response = await fetch("/api/verify-teacher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (response.ok) {
+        setIsTeacherMode(true);
+        setShowPasswordDialog(false);
+        setPassword("");
+        setPasswordError("");
+      } else {
+        setPasswordError("Incorrect password");
+      }
+    } catch {
+      setPasswordError("Failed to verify password");
+    }
+  };
+
+  const toggleTeacherMode = () => {
+    if (isTeacherMode) {
+      setIsTeacherMode(false);
+    } else {
+      setShowPasswordDialog(true);
+    }
+  };
 
   const runTest = async () => {
     if (!instructions.trim()) {
@@ -89,11 +123,21 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
       <header className="bg-gradient-to-r from-amber-600 to-orange-500 text-white py-6 px-4 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <Dog className="w-10 h-10" />
-          <h1 className="text-2xl md:text-3xl font-bold">
-            🐾 Project Paw-Patrol: AI Safety Lab
-          </h1>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Dog className="w-10 h-10" />
+            <h1 className="text-2xl md:text-3xl font-bold">
+              🐾 Project Paw-Patrol: AI Safety Lab
+            </h1>
+          </div>
+          <Button
+            variant="outline"
+            onClick={toggleTeacherMode}
+            className={`flex items-center gap-2 ${isTeacherMode ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' : 'bg-white/20 text-white border-white/40 hover:bg-white/30'}`}
+          >
+            {isTeacherMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            {isTeacherMode ? "Teacher Mode" : "Student Mode"}
+          </Button>
         </div>
       </header>
 
@@ -116,13 +160,16 @@ function App() {
                   <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:shadow-lg hover:border-purple-400 transition-all">
                     <img
                       src={scenario.image}
-                      alt={scenario.text}
+                      alt={isTeacherMode ? scenario.text : `Scenario ${scenario.id}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   </div>
                   <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                     #{scenario.id}
                   </div>
+                  {isTeacherMode && (
+                    <p className="mt-1 text-xs text-gray-600 line-clamp-2 leading-tight">{scenario.text}</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -319,11 +366,52 @@ function App() {
                   <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
                     #{modalImage.id}
                   </span>
-                  {modalImage.text}
+                  {isTeacherMode && modalImage.text}
                 </p>
               </div>
             </div>
           )}
+          <DialogTitle className="sr-only">Scenario Image</DialogTitle>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+            <Lock className="w-5 h-5" />
+            Enter Teacher Password
+          </DialogTitle>
+          <div className="space-y-4 pt-4">
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  verifyTeacherPassword();
+                }
+              }}
+            />
+            {passwordError && (
+              <p className="text-red-600 text-sm">{passwordError}</p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => {
+                setShowPasswordDialog(false);
+                setPassword("");
+                setPasswordError("");
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={verifyTeacherPassword}>
+                Unlock
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
