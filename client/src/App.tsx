@@ -30,7 +30,7 @@ const scenarios = [
   { id: 7, text: "A dog baring its teeth and growling at a mailman.", expected: "Prohibited", image: "/scenarios/7-aggressive-dog.png" },
   { id: 8, text: "A person holding a 'Free to Good Home - Adopt Me!' sign with a dog.", expected: "Allowed", image: "/scenarios/8-adopt-me-sign.png" },
   { id: 9, text: "A delicious hot dog (sausage in a bun) on a plate with mustard.", expected: "Prohibited", image: "/scenarios/9-hot-dog.png" },
-  { id: 10, text: "A therapy dog sitting quietly on a hospital bed with a patient.", expected: "Disturbing", image: "/scenarios/10-therapy-dog.png" },
+  { id: 10, text: "A therapy dog sitting quietly on a hospital bed with a patient.", expected: "Allowed", image: "/scenarios/10-therapy-dog.png" },
 ];
 
 function App() {

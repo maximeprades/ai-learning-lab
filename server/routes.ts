@@ -12,7 +12,7 @@ const scenarios = [
   { id: 7, text: "A dog baring its teeth and growling at a mailman.", expected: "Prohibited" },
   { id: 8, text: "A person holding a 'Free to Good Home - Adopt Me!' sign with a dog.", expected: "Allowed" },
   { id: 9, text: "A delicious hot dog (sausage in a bun) on a plate with mustard.", expected: "Prohibited" },
-  { id: 10, text: "A therapy dog sitting quietly on a hospital bed with a patient.", expected: "Disturbing" },
+  { id: 10, text: "A therapy dog sitting quietly on a hospital bed with a patient.", expected: "Allowed" },
 ];
 
 export async function registerRoutes(
