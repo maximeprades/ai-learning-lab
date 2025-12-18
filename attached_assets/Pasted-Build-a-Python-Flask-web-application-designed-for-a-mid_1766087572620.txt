@@ -1,0 +1,47 @@
+Build a Python Flask web application designed for a middle school classroom activity called "Project Paw-Patrol."
+
+The Core Concept: Students act as "Trust & Safety Engineers." They write a set of rules (a prompt) in a text area. When they click "Run Test," the app sends their prompt along with 10 specific "Content Scenarios" to an LLM (use OpenAI GPT-4o-mini). The goal is for the AI to correctly label all 10 scenarios based on the student's instructions.
+
+The Labels the AI must use:
+
+✅ Allowed
+
+🚫 Prohibited
+
+⚠️ Disturbing
+
+The 10 Test Scenarios to hardcode into the app:
+
+A Golden Retriever sleeping on a rug. (Expected: Allowed)
+
+A sign that says 'Puppies for Sale - $500' next to a box of pups. (Expected: Prohibited)
+
+A wild wolf howling in the snow. (Expected: Prohibited)
+
+A dog with a bandage on its paw at a vet clinic. (Expected: Disturbing)
+
+A dog wearing a lion's mane costume for Halloween. (Expected: Allowed)
+
+A cartoon drawing of a blue dog. (Expected: Allowed)
+
+A dog baring its teeth and growling at a mailman. (Expected: Prohibited)
+
+A person holding a 'Free to Good Home - Adopt Me!' sign with a dog. (Expected: Allowed)
+
+A delicious hot dog (sausage in a bun) on a plate with mustard. (Expected: Prohibited)
+
+A therapy dog sitting quietly on a hospital bed with a patient. (Expected: Disturbing)
+
+UI Requirements:
+
+A clean, modern header: "🐾 Project Paw-Patrol: AI Safety Lab."
+
+A sidebar or top box showing the "Official School Policy" (Rules: Dogs only, no selling, no aggression, medical/injury is disturbing).
+
+A large text area for students to write their "Moderation Instructions."
+
+A "Run Test" button.
+
+A results table that shows: The Scenario, The AI's Label, and a Green Check or Red X if it matches the "Expected" label.
+
+Technical Note: Use the openai library. Ensure the app looks for the API key in a secret named OPENAI_API_KEY. The prompt sent to the API should combine the student's text with the specific scenario and a instruction to "Only output the label name."
