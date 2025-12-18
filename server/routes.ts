@@ -3,6 +3,8 @@ import { type Server } from "http";
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
+import { WebSocketServer, WebSocket } from "ws";
+import { storage } from "./storage";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
@@ -25,11 +27,50 @@ function getImageBase64(imageName: string): string {
   return imageBuffer.toString("base64");
 }
 
+let wss: WebSocketServer;
+const teacherClients = new Set<WebSocket>();
+
+function broadcastToTeachers(data: any) {
+  const message = JSON.stringify(data);
+  teacherClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
+async function broadcastStudentUpdate() {
+  const students = await storage.getAllStudents();
+  broadcastToTeachers({ type: "students_update", students });
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
+  wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+  
+  wss.on("connection", (ws) => {
+    ws.on("message", async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        if (data.type === "teacher_subscribe") {
+          teacherClients.add(ws);
+          const students = await storage.getAllStudents();
+          ws.send(JSON.stringify({ type: "students_update", students }));
+        }
+      } catch (e) {
+        console.error("WebSocket message error:", e);
+      }
+    });
+    
+    ws.on("close", () => {
+      teacherClients.delete(ws);
+    });
+  });
+
   app.get("/api/scenarios", (_req, res) => {
     res.json(scenarios.map(s => ({ id: s.id, text: s.text })));
   });
@@ -43,9 +84,46 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/student/login", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      const student = await storage.getOrCreateStudent(email.toLowerCase().trim());
+      await broadcastStudentUpdate();
+      
+      const versions = await storage.getPromptVersions(student.id);
+      res.json({ 
+        student,
+        versions: versions.map(v => ({
+          id: `v${v.versionNumber}`,
+          versionNumber: v.versionNumber,
+          text: v.text,
+          score: v.score,
+          timestamp: v.createdAt
+        }))
+      });
+    } catch (error) {
+      console.error("Student login error:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  app.get("/api/teacher/students", async (_req, res) => {
+    try {
+      const students = await storage.getAllStudents();
+      res.json(students);
+    } catch (error) {
+      console.error("Get students error:", error);
+      res.status(500).json({ error: "Failed to get students" });
+    }
+  });
+
   app.post("/api/run-test", async (req, res) => {
     try {
-      const { moderationInstructions } = req.body;
+      const { moderationInstructions, email } = req.body;
 
       if (!moderationInstructions || typeof moderationInstructions !== "string") {
         return res.status(400).json({ error: "Moderation instructions are required" });
@@ -54,6 +132,13 @@ export async function registerRoutes(
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: "OpenAI API key not configured" });
+      }
+
+      let student = null;
+      if (email) {
+        student = await storage.getOrCreateStudent(email.toLowerCase().trim());
+        await storage.setStudentRunningTest(email.toLowerCase().trim(), true);
+        await broadcastStudentUpdate();
       }
 
       const openai = new OpenAI({ apiKey });
@@ -126,6 +211,23 @@ Analyze the image and classify it. Only output the label name exactly as shown a
       );
 
       const correctCount = results.filter(r => r.isCorrect).length;
+
+      if (student && email) {
+        const emailLower = email.toLowerCase().trim();
+        await storage.setStudentRunningTest(emailLower, false);
+        await storage.updateStudentScore(emailLower, correctCount);
+        
+        const versions = await storage.getPromptVersions(student.id);
+        const existingVersion = versions.find(v => v.text === moderationInstructions.trim());
+        
+        if (!existingVersion) {
+          const newVersionNumber = versions.length + 1;
+          await storage.savePromptVersion(student.id, newVersionNumber, moderationInstructions.trim(), correctCount);
+          await storage.incrementPromptCount(emailLower);
+        }
+        
+        await broadcastStudentUpdate();
+      }
       
       res.json({
         results,
@@ -134,6 +236,13 @@ Analyze the image and classify it. Only output the label name exactly as shown a
       });
     } catch (error) {
       console.error("Error running test:", error);
+      
+      const { email } = req.body;
+      if (email) {
+        await storage.setStudentRunningTest(email.toLowerCase().trim(), false);
+        await broadcastStudentUpdate();
+      }
+      
       res.status(500).json({ error: "Failed to run test" });
     }
   });

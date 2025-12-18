@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -25,13 +25,22 @@ interface TestResponse {
 
 interface PromptVersion {
   id: string;
+  versionNumber: number;
   text: string;
-  timestamp: number;
-  score?: number;
+  timestamp: string;
+  score?: number | null;
+}
+
+interface Student {
+  id: number;
+  email: string;
+  isRunningTest: boolean | null;
+  highestScore: number | null;
+  promptCount: number | null;
+  lastActive: string | null;
 }
 
 const STORAGE_KEY_EMAIL = "pawpatrol.currentEmail";
-const STORAGE_KEY_PROMPTS = "pawpatrol.prompts";
 
 const scenarios = [
   { id: 1, text: "A Golden Retriever sleeping on a rug.", expected: "Allowed", image: "/scenarios/1-golden-retriever-sleeping.png" },
@@ -54,24 +63,91 @@ function setStoredEmail(email: string): void {
   localStorage.setItem(STORAGE_KEY_EMAIL, email);
 }
 
-function getPromptVersions(email: string): PromptVersion[] {
-  const key = `${STORAGE_KEY_PROMPTS}.${email}`;
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : [];
-}
-
-function savePromptVersion(email: string, text: string, score?: number): PromptVersion {
-  const versions = getPromptVersions(email);
-  const newVersion: PromptVersion = {
-    id: `v${versions.length + 1}`,
-    text,
-    timestamp: Date.now(),
-    score,
+function TeacherDashboard({ students }: { students: Student[] }) {
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return date.toLocaleDateString();
   };
-  versions.push(newVersion);
-  const key = `${STORAGE_KEY_PROMPTS}.${email}`;
-  localStorage.setItem(key, JSON.stringify(versions));
-  return newVersion;
+
+  return (
+    <Card className="border-2 border-green-200 bg-green-50">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-green-800">
+          <Users className="w-5 h-5" />
+          Student Dashboard ({students.length} students)
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {students.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">No students have logged in yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-green-100">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-green-800">Rank</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-green-800">Email</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Prompts</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Best Score</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Status</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Last Active</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-green-200">
+                {students.map((student, index) => (
+                  <tr key={student.id} className={student.isRunningTest ? "bg-yellow-50" : ""}>
+                    <td className="px-4 py-3 text-sm">
+                      <span className="flex items-center gap-2">
+                        {index === 0 && <Trophy className="w-4 h-4 text-yellow-500" />}
+                        {index === 1 && <Trophy className="w-4 h-4 text-gray-400" />}
+                        {index === 2 && <Trophy className="w-4 h-4 text-amber-600" />}
+                        <span className="font-medium">#{index + 1}</span>
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
+                    <td className="px-4 py-3 text-center text-sm">{student.promptCount || 0}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`font-bold text-lg ${
+                        (student.highestScore || 0) === 10 ? "text-green-600" :
+                        (student.highestScore || 0) >= 7 ? "text-yellow-600" : "text-red-600"
+                      }`}>
+                        {student.highestScore ?? 0}/10
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {student.isRunningTest ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Testing...
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          Idle
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-500">
+                      <span className="flex items-center justify-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatTime(student.lastActive)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function App() {
@@ -92,16 +168,72 @@ function App() {
 
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>("draft");
+  const [students, setStudents] = useState<Student[]>([]);
+  
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const storedEmail = getStoredEmail();
     if (storedEmail) {
-      setEmail(storedEmail);
-      setPromptVersions(getPromptVersions(storedEmail));
+      loginStudent(storedEmail);
     } else {
       setShowEmailDialog(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (isTeacherMode) {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "teacher_subscribe" }));
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "students_update") {
+            setStudents(data.students);
+          }
+        } catch (e) {
+          console.error("WebSocket message error:", e);
+        }
+      };
+      
+      wsRef.current = ws;
+      
+      return () => {
+        ws.close();
+        wsRef.current = null;
+      };
+    }
+  }, [isTeacherMode]);
+
+  const loginStudent = async (studentEmail: string) => {
+    try {
+      const response = await fetch("/api/student/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: studentEmail }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setStoredEmail(studentEmail);
+        setEmail(studentEmail);
+        setPromptVersions(data.versions || []);
+        if (data.versions && data.versions.length > 0) {
+          setSelectedVersion(data.versions[data.versions.length - 1].id);
+        }
+        setShowEmailDialog(false);
+      } else {
+        setEmailError("Failed to login. Please try again.");
+      }
+    } catch {
+      setEmailError("Failed to connect to server.");
+    }
+  };
 
   const handleEmailSubmit = () => {
     const trimmedEmail = emailInput.trim();
@@ -113,11 +245,7 @@ function App() {
       setEmailError("Please enter a valid email address");
       return;
     }
-    setStoredEmail(trimmedEmail);
-    setEmail(trimmedEmail);
-    setPromptVersions(getPromptVersions(trimmedEmail));
-    setShowEmailDialog(false);
-    setEmailError("");
+    loginStudent(trimmedEmail);
   };
 
   const handleLogout = () => {
@@ -127,6 +255,7 @@ function App() {
     setPromptVersions([]);
     setSelectedVersion("draft");
     setResults(null);
+    setEmailInput("");
     setShowEmailDialog(true);
   };
 
@@ -184,7 +313,10 @@ function App() {
       const response = await fetch("/api/run-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ moderationInstructions: instructions }),
+        body: JSON.stringify({ 
+          moderationInstructions: instructions,
+          email: email 
+        }),
       });
 
       if (!response.ok) {
@@ -196,19 +328,23 @@ function App() {
       setResults(data);
 
       if (email) {
-        const matchingVersionId = findMatchingVersion();
-        if (!matchingVersionId) {
-          const newVersion = savePromptVersion(email, instructions.trim(), data.score);
-          setPromptVersions(getPromptVersions(email));
-          setSelectedVersion(newVersion.id);
-        } else {
-          const updatedVersions = promptVersions.map(v => 
-            v.id === matchingVersionId ? { ...v, score: data.score } : v
-          );
-          const key = `${STORAGE_KEY_PROMPTS}.${email}`;
-          localStorage.setItem(key, JSON.stringify(updatedVersions));
-          setPromptVersions(updatedVersions);
-          setSelectedVersion(matchingVersionId);
+        const loginResponse = await fetch("/api/student/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        
+        if (loginResponse.ok) {
+          const loginData = await loginResponse.json();
+          setPromptVersions(loginData.versions || []);
+          if (loginData.versions && loginData.versions.length > 0) {
+            const matchingVersion = loginData.versions.find((v: PromptVersion) => v.text === instructions.trim());
+            if (matchingVersion) {
+              setSelectedVersion(matchingVersion.id);
+            } else {
+              setSelectedVersion(loginData.versions[loginData.versions.length - 1].id);
+            }
+          }
         }
       }
     } catch (err) {
@@ -280,7 +416,7 @@ function App() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            {email && (
+            {email && !isTeacherMode && (
               <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full text-sm">
                 <Mail className="w-4 h-4" />
                 <span className="hidden sm:inline">{email}</span>
@@ -305,6 +441,10 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        {isTeacherMode && (
+          <TeacherDashboard students={students} />
+        )}
+
         <Card className="border-2 border-purple-200 bg-purple-50">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-purple-800">
@@ -412,7 +552,7 @@ function App() {
                       )}
                       {[...promptVersions].reverse().map((version) => (
                         <SelectItem key={version.id} value={version.id}>
-                          {version.id.toUpperCase()} {version.score !== undefined && `(${version.score}/10)`}
+                          {version.id.toUpperCase()} {version.score !== undefined && version.score !== null && `(${version.score}/10)`}
                         </SelectItem>
                       ))}
                     </SelectContent>
