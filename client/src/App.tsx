@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, X } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -38,7 +39,7 @@ function App() {
   const [results, setResults] = useState<TestResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [modalImage, setModalImage] = useState<{ id: number; image: string; text: string } | null>(null);
 
   const runTest = async () => {
     if (!instructions.trim()) {
@@ -110,27 +111,22 @@ function App() {
                 <div
                   key={scenario.id}
                   className="relative group cursor-pointer"
-                  onClick={() => setSelectedImage(selectedImage === scenario.id ? null : scenario.id)}
+                  onClick={() => setModalImage({ id: scenario.id, image: scenario.image, text: scenario.text })}
                 >
-                  <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:shadow-lg hover:border-purple-400 transition-all">
                     <img
                       src={scenario.image}
                       alt={scenario.text}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   </div>
                   <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                     #{scenario.id}
                   </div>
-                  {selectedImage === scenario.id && (
-                    <div className="absolute inset-0 bg-black/80 rounded-lg flex items-center justify-center p-2">
-                      <p className="text-white text-xs text-center leading-tight">{scenario.text}</p>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
-            <p className="text-xs text-purple-600 mt-3 text-center">Click on any image to see its description</p>
+            <p className="text-xs text-purple-600 mt-3 text-center">Click on any image to enlarge it</p>
           </CardContent>
         </Card>
 
@@ -284,6 +280,28 @@ function App() {
       <footer className="mt-8 py-4 text-center text-sm text-gray-500">
         <p>Project Paw-Patrol - Teaching AI Safety & Content Moderation</p>
       </footer>
+
+      <Dialog open={modalImage !== null} onOpenChange={() => setModalImage(null)}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+          {modalImage && (
+            <div className="relative">
+              <img
+                src={modalImage.image}
+                alt={modalImage.text}
+                className="w-full h-auto max-h-[70vh] object-contain"
+              />
+              <div className="p-4 bg-white">
+                <p className="text-sm font-medium text-gray-800">
+                  <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-bold mr-2">
+                    #{modalImage.id}
+                  </span>
+                  {modalImage.text}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
