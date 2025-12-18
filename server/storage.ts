@@ -12,6 +12,8 @@ import {
   type InsertPromptVersion
 } from "@shared/schema";
 
+const MAX_PROMPTS_PER_USER = 50;
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -19,13 +21,17 @@ export interface IStorage {
   
   getOrCreateStudent(email: string): Promise<Student>;
   getStudent(email: string): Promise<Student | undefined>;
+  getStudentById(id: number): Promise<Student | undefined>;
   getAllStudents(): Promise<Student[]>;
+  deleteStudent(id: number): Promise<void>;
   setStudentRunningTest(email: string, isRunning: boolean): Promise<void>;
   updateStudentScore(email: string, score: number): Promise<void>;
   incrementPromptCount(email: string): Promise<void>;
   
   getPromptVersions(studentId: number): Promise<PromptVersion[]>;
-  savePromptVersion(studentId: number, versionNumber: number, text: string, score: number | null): Promise<PromptVersion>;
+  getPromptVersionCount(studentId: number): Promise<number>;
+  savePromptVersion(studentId: number, versionNumber: number, text: string, score: number | null): Promise<PromptVersion | null>;
+  deletePromptVersionsByStudent(studentId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -64,8 +70,18 @@ export class DatabaseStorage implements IStorage {
     return student;
   }
 
+  async getStudentById(id: number): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student;
+  }
+
   async getAllStudents(): Promise<Student[]> {
     return await db.select().from(students).orderBy(desc(students.highestScore));
+  }
+
+  async deleteStudent(id: number): Promise<void> {
+    await this.deletePromptVersionsByStudent(id);
+    await db.delete(students).where(eq(students.id, id));
   }
 
   async setStudentRunningTest(email: string, isRunning: boolean): Promise<void> {
@@ -99,16 +115,30 @@ export class DatabaseStorage implements IStorage {
       .orderBy(promptVersions.versionNumber);
   }
 
+  async getPromptVersionCount(studentId: number): Promise<number> {
+    const versions = await this.getPromptVersions(studentId);
+    return versions.length;
+  }
+
   async savePromptVersion(
     studentId: number, 
     versionNumber: number, 
     text: string, 
     score: number | null
-  ): Promise<PromptVersion> {
+  ): Promise<PromptVersion | null> {
+    const count = await this.getPromptVersionCount(studentId);
+    if (count >= MAX_PROMPTS_PER_USER) {
+      return null;
+    }
+    
     const [version] = await db.insert(promptVersions)
       .values({ studentId, versionNumber, text, score })
       .returning();
     return version;
+  }
+
+  async deletePromptVersionsByStudent(studentId: number): Promise<void> {
+    await db.delete(promptVersions).where(eq(promptVersions.studentId, studentId));
   }
 }
 

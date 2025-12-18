@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2 } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -63,7 +63,12 @@ function setStoredEmail(email: string): void {
   localStorage.setItem(STORAGE_KEY_EMAIL, email);
 }
 
-function TeacherDashboard({ students }: { students: Student[] }) {
+function TeacherDashboard({ students, onDeleteStudent, showUsersMenu, onToggleUsersMenu }: { 
+  students: Student[]; 
+  onDeleteStudent: (id: number, email: string) => void;
+  showUsersMenu: boolean;
+  onToggleUsersMenu: () => void;
+}) {
   const formatTime = (dateString: string | null) => {
     if (!dateString) return "Never";
     const date = new Date(dateString);
@@ -79,9 +84,20 @@ function TeacherDashboard({ students }: { students: Student[] }) {
   return (
     <Card className="border-2 border-green-200 bg-green-50">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-green-800">
-          <Users className="w-5 h-5" />
-          Student Dashboard ({students.length} students)
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-green-800">
+            <Users className="w-5 h-5" />
+            Student Dashboard ({students.length} students)
+          </span>
+          <Button
+            variant={showUsersMenu ? "default" : "outline"}
+            size="sm"
+            onClick={onToggleUsersMenu}
+            className={showUsersMenu ? "bg-red-600 hover:bg-red-700" : ""}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            {showUsersMenu ? "Hide Users Menu" : "Users Menu"}
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -98,6 +114,9 @@ function TeacherDashboard({ students }: { students: Student[] }) {
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Best Score</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Status</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Last Active</th>
+                  {showUsersMenu && (
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-green-200">
@@ -139,6 +158,17 @@ function TeacherDashboard({ students }: { students: Student[] }) {
                         {formatTime(student.lastActive)}
                       </span>
                     </td>
+                    {showUsersMenu && (
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDeleteStudent(student.id, student.email)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -169,6 +199,8 @@ function App() {
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>("draft");
   const [students, setStudents] = useState<Student[]>([]);
+  const [showUsersMenu, setShowUsersMenu] = useState(false);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string } | null>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -283,8 +315,23 @@ function App() {
   const toggleTeacherMode = () => {
     if (isTeacherMode) {
       setIsTeacherMode(false);
+      setShowUsersMenu(false);
     } else {
       setShowPasswordDialog(true);
+    }
+  };
+
+  const handleDeleteStudent = async (id: number) => {
+    try {
+      const response = await fetch(`/api/teacher/students/${id}`, {
+        method: "DELETE",
+      });
+      
+      if (response.ok) {
+        setDeleteConfirmDialog(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete student:", error);
     }
   };
 
@@ -442,7 +489,12 @@ function App() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {isTeacherMode && (
-          <TeacherDashboard students={students} />
+          <TeacherDashboard 
+            students={students} 
+            onDeleteStudent={(id, email) => setDeleteConfirmDialog({ id, email })}
+            showUsersMenu={showUsersMenu}
+            onToggleUsersMenu={() => setShowUsersMenu(!showUsersMenu)}
+          />
         )}
 
         <Card className="border-2 border-purple-200 bg-purple-50">
@@ -740,6 +792,31 @@ function App() {
               </Button>
               <Button onClick={verifyTeacherPassword}>
                 Unlock
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteConfirmDialog !== null} onOpenChange={() => setDeleteConfirmDialog(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-red-600">
+            <Trash2 className="w-5 h-5" />
+            Delete User
+          </DialogTitle>
+          <div className="space-y-4 pt-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete <strong>{deleteConfirmDialog?.email}</strong>? This will permanently remove all their prompts and data.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteConfirmDialog(null)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => deleteConfirmDialog && handleDeleteStudent(deleteConfirmDialog.id)}
+              >
+                Delete User
               </Button>
             </div>
           </div>

@@ -121,6 +121,28 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/teacher/students/:id", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      const student = await storage.getStudentById(studentId);
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+      
+      await storage.deleteStudent(studentId);
+      await broadcastStudentUpdate();
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete student error:", error);
+      res.status(500).json({ error: "Failed to delete student" });
+    }
+  });
+
   app.post("/api/run-test", async (req, res) => {
     try {
       const { moderationInstructions, email } = req.body;
