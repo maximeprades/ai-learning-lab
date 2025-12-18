@@ -267,7 +267,7 @@ function App() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Image</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Scenario</th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Expected</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">AI Said</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Your Model</th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Result</th>
                     </tr>
                   </thead>
