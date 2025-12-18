@@ -223,7 +223,10 @@ function App() {
                 onChange={(e) => setInstructions(e.target.value)}
                 className="min-h-[200px] text-base"
               />
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-end gap-4">
+                {error && (
+                  <p className="text-red-600 text-sm">{error}</p>
+                )}
                 <Button 
                   onClick={runTest} 
                   disabled={isLoading}
@@ -239,9 +242,6 @@ function App() {
                     "🧪 Run Test"
                   )}
                 </Button>
-                {error && (
-                  <p className="text-red-600 text-sm">{error}</p>
-                )}
               </div>
             </CardContent>
           </Card>
