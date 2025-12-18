@@ -135,8 +135,8 @@ function App() {
             onClick={toggleTeacherMode}
             className={`flex items-center gap-2 ${isTeacherMode ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' : 'bg-white/20 text-white border-white/40 hover:bg-white/30'}`}
           >
-            {isTeacherMode ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            {isTeacherMode ? "Teacher Mode" : "Student Mode"}
+            {isTeacherMode ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+            {isTeacherMode ? "Switch to Student Mode" : "Switch to Teacher Mode"}
           </Button>
         </div>
       </header>
