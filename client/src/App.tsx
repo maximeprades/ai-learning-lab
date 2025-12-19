@@ -64,11 +64,9 @@ function setStoredEmail(email: string): void {
   localStorage.setItem(STORAGE_KEY_EMAIL, email);
 }
 
-function TeacherDashboard({ students, onDeleteStudent, isLocked, onToggleLock }: { 
+function TeacherDashboard({ students, onDeleteStudent }: { 
   students: Student[]; 
   onDeleteStudent: (id: number, email: string) => void;
-  isLocked: boolean;
-  onToggleLock: () => void;
 }) {
   const formatTime = (dateString: string | null) => {
     if (!dateString) return "Never";
@@ -85,29 +83,10 @@ function TeacherDashboard({ students, onDeleteStudent, isLocked, onToggleLock }:
   return (
     <Card className="border-2 border-green-200 bg-green-50">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-green-800">
-            <Users className="w-5 h-5" />
-            Student Dashboard ({students.length} students)
-          </CardTitle>
-          <Button
-            onClick={onToggleLock}
-            variant={isLocked ? "destructive" : "outline"}
-            className={isLocked ? "bg-red-600 hover:bg-red-700" : "border-green-600 text-green-600 hover:bg-green-50"}
-          >
-            {isLocked ? (
-              <>
-                <Lock className="w-4 h-4 mr-2" />
-                API Locked
-              </>
-            ) : (
-              <>
-                <Unlock className="w-4 h-4 mr-2" />
-                API Unlocked
-              </>
-            )}
-          </Button>
-        </div>
+        <CardTitle className="flex items-center gap-2 text-green-800">
+          <Users className="w-5 h-5" />
+          Student Dashboard ({students.length} students)
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {students.length === 0 ? (
@@ -532,12 +511,44 @@ function App() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {isTeacherMode && (
-          <TeacherDashboard 
-            students={students} 
-            onDeleteStudent={(id, email) => setDeleteConfirmDialog({ id, email })}
-            isLocked={isAppLocked}
-            onToggleLock={toggleAppLock}
-          />
+          <div className="space-y-4">
+            <Card className="border-2 border-indigo-200 bg-indigo-50">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-indigo-700" />
+                    <span className="font-medium text-indigo-800">API Access Control</span>
+                  </div>
+                  <Button
+                    onClick={toggleAppLock}
+                    variant={isAppLocked ? "destructive" : "outline"}
+                    className={isAppLocked ? "bg-red-600 hover:bg-red-700" : "border-green-600 text-green-600 hover:bg-green-50"}
+                  >
+                    {isAppLocked ? (
+                      <>
+                        <Lock className="w-4 h-4 mr-2" />
+                        API Locked
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="w-4 h-4 mr-2" />
+                        API Unlocked
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-sm text-indigo-600 mt-2">
+                  {isAppLocked 
+                    ? "Students cannot run tests using the AI API. Only 'test' mode works." 
+                    : "Students can run tests using the AI API."}
+                </p>
+              </CardContent>
+            </Card>
+            <TeacherDashboard 
+              students={students} 
+              onDeleteStudent={(id, email) => setDeleteConfirmDialog({ id, email })}
+            />
+          </div>
         )}
 
         <Card className="border-2 border-purple-200 bg-purple-50">
@@ -914,6 +925,25 @@ function App() {
             )}
             <Button onClick={handleEmailSubmit} className="w-full">
               Get Started
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or</span>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowEmailDialog(false);
+                setShowPasswordDialog(true);
+              }}
+              className="w-full"
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              Enter as Teacher
             </Button>
           </div>
         </DialogContent>
