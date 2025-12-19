@@ -101,7 +101,7 @@ function TeacherDashboard({ students, onDeleteStudent }: {
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Best Score</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Status</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Last Active</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800"></th>
+                  <th className="px-2 py-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-green-200">
@@ -143,11 +143,11 @@ function TeacherDashboard({ students, onDeleteStudent }: {
                         {formatTime(student.lastActive)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-2 py-3 text-center">
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                         onClick={() => onDeleteStudent(student.id, student.email)}
                       >
                         <Trash2 className="w-4 h-4" />
