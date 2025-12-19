@@ -553,7 +553,7 @@ function App() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
-                placeholder="Write your moderation rules here...&#10;&#10;Example:&#10;- Allow pictures of dogs that are happy and safe&#10;- Block any content that shows dogs being sold&#10;- Mark medical situations as disturbing..."
+                placeholder="Write your moderation prompt here and hit Run Test to see how it did on the sample set above"
                 value={instructions}
                 onChange={(e) => {
                   setInstructions(e.target.value);
