@@ -13,8 +13,10 @@ const pool = new Pool({
 export const db = drizzle(pool, { schema });
 
 export async function initializeDatabase() {
-  const client = await pool.connect();
+  let client;
   try {
+    console.log("Connecting to database...");
+    client = await pool.connect();
     await client.query(`
       CREATE TABLE IF NOT EXISTS students (
         id SERIAL PRIMARY KEY,
@@ -42,10 +44,16 @@ export async function initializeDatabase() {
       );
     `);
     console.log("Database tables initialized successfully");
-  } catch (error) {
-    console.error("Error initializing database tables:", error);
+  } catch (error: any) {
+    console.error("Error initializing database:", error.message);
+    if (error.message?.includes('EAI_AGAIN') || error.message?.includes('getaddrinfo')) {
+      console.error("DNS resolution failed. This usually means the database hostname is incorrect for this environment.");
+      console.error("For production deployments, ensure DATABASE_URL is configured in the Deployments settings.");
+    }
     throw error;
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+    }
   }
 }
