@@ -42,6 +42,13 @@ export async function initializeDatabase() {
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL
       );
+      
+      CREATE TABLE IF NOT EXISTS app_settings (
+        id SERIAL PRIMARY KEY,
+        is_locked BOOLEAN DEFAULT false
+      );
+      
+      INSERT INTO app_settings (id, is_locked) VALUES (1, false) ON CONFLICT (id) DO NOTHING;
     `);
     console.log("Database tables initialized successfully");
   } catch (error: any) {

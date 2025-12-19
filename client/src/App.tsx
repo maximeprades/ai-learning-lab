@@ -63,9 +63,11 @@ function setStoredEmail(email: string): void {
   localStorage.setItem(STORAGE_KEY_EMAIL, email);
 }
 
-function TeacherDashboard({ students, onDeleteStudent }: { 
+function TeacherDashboard({ students, onDeleteStudent, isLocked, onToggleLock }: { 
   students: Student[]; 
   onDeleteStudent: (id: number, email: string) => void;
+  isLocked: boolean;
+  onToggleLock: () => void;
 }) {
   const formatTime = (dateString: string | null) => {
     if (!dateString) return "Never";
@@ -82,10 +84,29 @@ function TeacherDashboard({ students, onDeleteStudent }: {
   return (
     <Card className="border-2 border-green-200 bg-green-50">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-green-800">
-          <Users className="w-5 h-5" />
-          Student Dashboard ({students.length} students)
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-green-800">
+            <Users className="w-5 h-5" />
+            Student Dashboard ({students.length} students)
+          </CardTitle>
+          <Button
+            onClick={onToggleLock}
+            variant={isLocked ? "destructive" : "outline"}
+            className={isLocked ? "bg-red-600 hover:bg-red-700" : "border-green-600 text-green-600 hover:bg-green-50"}
+          >
+            {isLocked ? (
+              <>
+                <Lock className="w-4 h-4 mr-2" />
+                API Locked
+              </>
+            ) : (
+              <>
+                <Unlock className="w-4 h-4 mr-2" />
+                API Unlocked
+              </>
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {students.length === 0 ? (
@@ -184,8 +205,34 @@ function App() {
   const [selectedVersion, setSelectedVersion] = useState<string>("draft");
   const [students, setStudents] = useState<Student[]>([]);
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string } | null>(null);
+  const [isAppLocked, setIsAppLocked] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (isTeacherMode) {
+      fetch("/api/app-lock")
+        .then(res => res.json())
+        .then(data => setIsAppLocked(data.isLocked))
+        .catch(console.error);
+    }
+  }, [isTeacherMode]);
+
+  const toggleAppLock = async () => {
+    try {
+      const newLockState = !isAppLocked;
+      const response = await fetch("/api/teacher/toggle-lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked: newLockState }),
+      });
+      if (response.ok) {
+        setIsAppLocked(newLockState);
+      }
+    } catch (error) {
+      console.error("Failed to toggle lock:", error);
+    }
+  };
 
   useEffect(() => {
     const storedEmail = getStoredEmail();
@@ -485,6 +532,8 @@ function App() {
           <TeacherDashboard 
             students={students} 
             onDeleteStudent={(id, email) => setDeleteConfirmDialog({ id, email })}
+            isLocked={isAppLocked}
+            onToggleLock={toggleAppLock}
           />
         )}
 

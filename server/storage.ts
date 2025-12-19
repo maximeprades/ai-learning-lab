@@ -4,6 +4,7 @@ import {
   users, 
   students, 
   promptVersions,
+  appSettings,
   type User, 
   type InsertUser,
   type Student,
@@ -139,6 +140,17 @@ export class DatabaseStorage implements IStorage {
 
   async deletePromptVersionsByStudent(studentId: number): Promise<void> {
     await db.delete(promptVersions).where(eq(promptVersions.studentId, studentId));
+  }
+
+  async isAppLocked(): Promise<boolean> {
+    const [settings] = await db.select().from(appSettings).where(eq(appSettings.id, 1));
+    return settings?.isLocked ?? false;
+  }
+
+  async setAppLocked(locked: boolean): Promise<void> {
+    await db.update(appSettings)
+      .set({ isLocked: locked })
+      .where(eq(appSettings.id, 1));
   }
 }
 

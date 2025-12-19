@@ -27,6 +27,11 @@ export const promptVersions = pgTable("prompt_versions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const appSettings = pgTable("app_settings", {
+  id: serial("id").primaryKey(),
+  isLocked: boolean("is_locked").default(false),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,

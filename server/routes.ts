@@ -143,6 +143,27 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/app-lock", async (_req, res) => {
+    try {
+      const isLocked = await storage.isAppLocked();
+      res.json({ isLocked });
+    } catch (error) {
+      console.error("Get lock status error:", error);
+      res.json({ isLocked: false });
+    }
+  });
+
+  app.post("/api/teacher/toggle-lock", async (req, res) => {
+    try {
+      const { locked } = req.body;
+      await storage.setAppLocked(locked);
+      res.json({ success: true, isLocked: locked });
+    } catch (error) {
+      console.error("Toggle lock error:", error);
+      res.status(500).json({ error: "Failed to toggle lock" });
+    }
+  });
+
   app.post("/api/run-test", async (req, res) => {
     try {
       const { moderationInstructions, email } = req.body;
@@ -156,6 +177,15 @@ export async function registerRoutes(
         student = await storage.getOrCreateStudent(email.toLowerCase().trim());
         await storage.setStudentRunningTest(email.toLowerCase().trim(), true);
         await broadcastStudentUpdate();
+      }
+
+      const isLocked = await storage.isAppLocked();
+      if (isLocked && moderationInstructions.trim().toLowerCase() !== "test") {
+        if (student && email) {
+          await storage.setStudentRunningTest(email.toLowerCase().trim(), false);
+          await broadcastStudentUpdate();
+        }
+        return res.status(403).json({ error: "The app is currently locked by the teacher. Please wait until it's unlocked to run tests." });
       }
 
       if (moderationInstructions.trim().toLowerCase() === "test") {
