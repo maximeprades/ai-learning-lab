@@ -151,16 +151,48 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Moderation instructions are required" });
       }
 
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "OpenAI API key not configured" });
-      }
-
       let student = null;
       if (email) {
         student = await storage.getOrCreateStudent(email.toLowerCase().trim());
         await storage.setStudentRunningTest(email.toLowerCase().trim(), true);
         await broadcastStudentUpdate();
+      }
+
+      if (moderationInstructions.trim().toLowerCase() === "test") {
+        const dummyLabels = ["✅ Allowed", "🚫 Prohibited", "⚠️ Disturbing"];
+        const dummyResults = scenarios.map((scenario) => {
+          const randomLabel = dummyLabels[Math.floor(Math.random() * 3)];
+          const normalizedLabel = randomLabel.includes("Allowed") ? "Allowed" 
+            : randomLabel.includes("Prohibited") ? "Prohibited"
+            : "Disturbing";
+          return {
+            id: scenario.id,
+            text: scenario.text,
+            expected: scenario.expected,
+            aiLabel: randomLabel,
+            normalizedLabel: normalizedLabel,
+            isCorrect: normalizedLabel === scenario.expected,
+          };
+        });
+
+        const correctCount = dummyResults.filter(r => r.isCorrect).length;
+
+        if (student && email) {
+          const emailLower = email.toLowerCase().trim();
+          await storage.setStudentRunningTest(emailLower, false);
+          await broadcastStudentUpdate();
+        }
+
+        return res.json({
+          results: dummyResults,
+          score: correctCount,
+          total: scenarios.length,
+        });
+      }
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "OpenAI API key not configured" });
       }
 
       const openai = new OpenAI({ apiKey });
