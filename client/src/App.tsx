@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Loader2, Dog, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2 } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -435,13 +435,13 @@ function App() {
   }, [instructions, promptVersions, selectedVersion]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <header className="bg-gradient-to-r from-amber-600 to-orange-500 text-white py-6 shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50">
+      <header className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-6 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Dog className="w-10 h-10" />
+            <PawPrint className="w-10 h-10" />
             <h1 className="text-2xl md:text-3xl font-bold">
-              🐾 Project Paw-Patrol: AI Safety Lab
+              Prompt 101: AI Safety Lab
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -521,7 +521,7 @@ function App() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-blue-900">
-              <p className="font-semibold mb-3">Our Paw-Patrol Platform Rules:</p>
+              <p className="font-semibold mb-3">Platform Content Rules:</p>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">✅</span>
@@ -547,7 +547,7 @@ function App() {
           <Card className="md:col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <AlertTriangle className="w-5 h-5 text-indigo-600" />
                 Your Moderation Instructions
               </CardTitle>
             </CardHeader>
@@ -593,7 +593,7 @@ function App() {
                 <Button 
                   onClick={runTest} 
                   disabled={isLoading}
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-2"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2"
                   size="lg"
                 >
                   {isLoading ? (
@@ -611,8 +611,8 @@ function App() {
         </div>
 
         {results && (
-          <Card className="border-2 border-amber-200">
-            <CardHeader className="bg-amber-50 border-b">
+          <Card className="border-2 border-indigo-200">
+            <CardHeader className="bg-indigo-50 border-b">
               <CardTitle className="flex items-center justify-between">
                 <span>Test Results</span>
                 <span className={`text-xl ${results.score === results.total ? 'text-green-600' : results.score >= 7 ? 'text-yellow-600' : 'text-red-600'}`}>
@@ -680,7 +680,7 @@ function App() {
         {!results && !isLoading && (
           <Card className="bg-gray-50 border-dashed border-2">
             <CardContent className="py-12 text-center text-gray-500">
-              <Dog className="w-16 h-16 mx-auto mb-4 opacity-30" />
+              <PawPrint className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p className="text-lg">Write your moderation instructions above and click "Run Test" to see how well your AI safety rules work!</p>
             </CardContent>
           </Card>
@@ -688,7 +688,7 @@ function App() {
       </main>
 
       <footer className="mt-8 py-4 text-center text-sm text-gray-500">
-        <p>Project Paw-Patrol - Teaching AI Safety & Content Moderation</p>
+        <p>Prompt 101 - Teaching AI Safety & Content Moderation</p>
       </footer>
 
       <Dialog open={modalImage !== null} onOpenChange={() => setModalImage(null)}>
@@ -806,8 +806,8 @@ function App() {
       <Dialog open={showEmailDialog} onOpenChange={() => {}}>
         <DialogContent className="max-w-sm" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-            <Dog className="w-5 h-5" />
-            Welcome to Paw-Patrol!
+            <PawPrint className="w-5 h-5" />
+            Welcome to Prompt 101!
           </DialogTitle>
           <div className="space-y-4 pt-4">
             <p className="text-sm text-gray-600">
