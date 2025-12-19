@@ -210,16 +210,14 @@ export async function registerRoutes(
                   content: [
                     {
                       type: "text",
-                      text: `You are a content moderation AI. You must classify the image based on the following moderation rules:
-
-${moderationInstructions}
+                      text: `${moderationInstructions}
 
 The possible labels are:
 - ✅ Allowed
 - 🚫 Prohibited  
 - ⚠️ Disturbing
 
-Analyze the image and classify it. Only output the label name exactly as shown above (including the emoji). Do not include any other text.`
+Also describe each image in a short 13 words maximum description.`
                     },
                     {
                       type: "image_url",
