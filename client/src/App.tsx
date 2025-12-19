@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2 } from "lucide-react";
 import "@fontsource/inter";
 
@@ -716,9 +717,19 @@ function App() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
-                              {result.aiLabel}
-                            </span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors">
+                                  {getLabelEmoji(result.normalizedLabel)} {result.normalizedLabel}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-3">
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-gray-500 uppercase">Full Model Response</p>
+                                  <p className="text-sm text-gray-800">{result.aiLabel}</p>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           </td>
                           <td className="px-4 py-3 text-center">
                             {result.isCorrect ? (
