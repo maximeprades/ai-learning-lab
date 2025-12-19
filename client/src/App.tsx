@@ -63,11 +63,9 @@ function setStoredEmail(email: string): void {
   localStorage.setItem(STORAGE_KEY_EMAIL, email);
 }
 
-function TeacherDashboard({ students, onDeleteStudent, showUsersMenu, onToggleUsersMenu }: { 
+function TeacherDashboard({ students, onDeleteStudent }: { 
   students: Student[]; 
   onDeleteStudent: (id: number, email: string) => void;
-  showUsersMenu: boolean;
-  onToggleUsersMenu: () => void;
 }) {
   const formatTime = (dateString: string | null) => {
     if (!dateString) return "Never";
@@ -84,20 +82,9 @@ function TeacherDashboard({ students, onDeleteStudent, showUsersMenu, onToggleUs
   return (
     <Card className="border-2 border-green-200 bg-green-50">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2 text-green-800">
-            <Users className="w-5 h-5" />
-            Student Dashboard ({students.length} students)
-          </span>
-          <Button
-            variant={showUsersMenu ? "default" : "outline"}
-            size="sm"
-            onClick={onToggleUsersMenu}
-            className={showUsersMenu ? "bg-red-600 hover:bg-red-700" : ""}
-          >
-            <Users className="w-4 h-4 mr-2" />
-            {showUsersMenu ? "Hide Users Menu" : "Users Menu"}
-          </Button>
+        <CardTitle className="flex items-center gap-2 text-green-800">
+          <Users className="w-5 h-5" />
+          Student Dashboard ({students.length} students)
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -114,9 +101,7 @@ function TeacherDashboard({ students, onDeleteStudent, showUsersMenu, onToggleUs
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Best Score</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Status</th>
                   <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Last Active</th>
-                  {showUsersMenu && (
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Actions</th>
-                  )}
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-green-200">
@@ -158,17 +143,16 @@ function TeacherDashboard({ students, onDeleteStudent, showUsersMenu, onToggleUs
                         {formatTime(student.lastActive)}
                       </span>
                     </td>
-                    {showUsersMenu && (
-                      <td className="px-4 py-3 text-center">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => onDeleteStudent(student.id, student.email)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </td>
-                    )}
+                    <td className="px-4 py-3 text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => onDeleteStudent(student.id, student.email)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -199,7 +183,6 @@ function App() {
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>("draft");
   const [students, setStudents] = useState<Student[]>([]);
-  const [showUsersMenu, setShowUsersMenu] = useState(false);
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string } | null>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
@@ -315,7 +298,6 @@ function App() {
   const toggleTeacherMode = () => {
     if (isTeacherMode) {
       setIsTeacherMode(false);
-      setShowUsersMenu(false);
     } else {
       setShowPasswordDialog(true);
     }
@@ -492,8 +474,6 @@ function App() {
           <TeacherDashboard 
             students={students} 
             onDeleteStudent={(id, email) => setDeleteConfirmDialog({ id, email })}
-            showUsersMenu={showUsersMenu}
-            onToggleUsersMenu={() => setShowUsersMenu(!showUsersMenu)}
           />
         )}
 
