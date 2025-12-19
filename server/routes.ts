@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { type Server } from "http";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
 import { WebSocketServer, WebSocket } from "ws";
@@ -166,7 +167,7 @@ export async function registerRoutes(
 
   app.post("/api/run-test", async (req, res) => {
     try {
-      const { moderationInstructions, email } = req.body;
+      const { moderationInstructions, email, model = "gpt-4o-mini" } = req.body;
 
       if (!moderationInstructions || typeof moderationInstructions !== "string") {
         return res.status(400).json({ error: "Moderation instructions are required" });
@@ -220,6 +221,107 @@ export async function registerRoutes(
         });
       }
 
+      const isAnthropicModel = model.startsWith("claude");
+      
+      if (isAnthropicModel) {
+        const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+        if (!anthropicApiKey) {
+          return res.status(500).json({ error: "Anthropic API key not configured" });
+        }
+
+        const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+
+        const results = await Promise.all(
+          scenarios.map(async (scenario) => {
+            try {
+              const imageBase64 = getImageBase64(scenario.image);
+              
+              const response = await anthropic.messages.create({
+                model: model,
+                max_tokens: 50,
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: "image",
+                        source: {
+                          type: "base64",
+                          media_type: "image/png",
+                          data: imageBase64,
+                        },
+                      },
+                      {
+                        type: "text",
+                        text: `${moderationInstructions}
+
+The possible labels are:
+- ✅ Allowed
+- 🚫 Prohibited  
+- ⚠️ Disturbing
+
+Respond with ONLY the label.`
+                      }
+                    ]
+                  }
+                ],
+              });
+
+              const aiLabel = (response.content[0] as any)?.text?.trim() || "Unknown";
+              
+              const normalizedAiLabel = aiLabel.includes("Allowed") ? "Allowed" 
+                : aiLabel.includes("Prohibited") ? "Prohibited"
+                : aiLabel.includes("Disturbing") ? "Disturbing"
+                : "Unknown";
+
+              return {
+                id: scenario.id,
+                text: scenario.text,
+                expected: scenario.expected,
+                aiLabel: aiLabel,
+                normalizedLabel: normalizedAiLabel,
+                isCorrect: normalizedAiLabel === scenario.expected,
+              };
+            } catch (error) {
+              console.error(`Error processing scenario ${scenario.id}:`, error);
+              return {
+                id: scenario.id,
+                text: scenario.text,
+                expected: scenario.expected,
+                aiLabel: "Error",
+                normalizedLabel: "Error",
+                isCorrect: false,
+              };
+            }
+          })
+        );
+
+        const correctCount = results.filter(r => r.isCorrect).length;
+
+        if (student && email) {
+          const emailLower = email.toLowerCase().trim();
+          await storage.setStudentRunningTest(emailLower, false);
+          await storage.updateStudentScore(emailLower, correctCount);
+          
+          const versions = await storage.getPromptVersions(student.id);
+          const existingVersion = versions.find(v => v.text === moderationInstructions.trim());
+          
+          if (!existingVersion) {
+            const newVersionNumber = versions.length + 1;
+            await storage.savePromptVersion(student.id, newVersionNumber, moderationInstructions.trim(), correctCount);
+            await storage.incrementPromptCount(emailLower);
+          }
+          
+          await broadcastStudentUpdate();
+        }
+        
+        return res.json({
+          results,
+          score: correctCount,
+          total: scenarios.length,
+        });
+      }
+
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: "OpenAI API key not configured" });
@@ -233,7 +335,7 @@ export async function registerRoutes(
             const imageBase64 = getImageBase64(scenario.image);
             
             const response = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
+              model: model,
               messages: [
                 {
                   role: "user",

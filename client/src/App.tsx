@@ -193,6 +193,7 @@ function App() {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
   const [instructions, setInstructions] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gpt-4o-mini");
   const [results, setResults] = useState<TestResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -392,7 +393,8 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           moderationInstructions: instructions,
-          email: email 
+          email: email,
+          model: selectedModel
         }),
       });
 
@@ -627,7 +629,7 @@ function App() {
                 }}
                 className="min-h-[200px] text-base"
               />
-              <div className="flex items-center justify-end gap-3">
+              <div className="flex items-center justify-end gap-3 flex-wrap">
                 {error && (
                   <p className="text-red-600 text-sm">{error}</p>
                 )}
@@ -651,6 +653,15 @@ function App() {
                     </SelectContent>
                   </Select>
                 )}
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4o-mini">GPT-4o Mini (OpenAI)</SelectItem>
+                    <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku (Anthropic)</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button 
                   onClick={runTest} 
                   disabled={isLoading}
