@@ -32,6 +32,22 @@ export const appSettings = pgTable("app_settings", {
   isLocked: boolean("is_locked").default(false),
 });
 
+export const promptTemplates = pgTable("prompt_templates", {
+  id: serial("id").primaryKey(),
+  template: text("template").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const scenarios = pgTable("scenarios", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  expected: text("expected").notNull(),
+  imagePath: text("image_path").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -54,3 +70,5 @@ export type Student = typeof students.$inferSelect;
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type PromptVersion = typeof promptVersions.$inferSelect;
 export type InsertPromptVersion = z.infer<typeof insertPromptVersionSchema>;
+export type PromptTemplate = typeof promptTemplates.$inferSelect;
+export type Scenario = typeof scenarios.$inferSelect;

@@ -5,12 +5,16 @@ import {
   students, 
   promptVersions,
   appSettings,
+  promptTemplates,
+  scenarios,
   type User, 
   type InsertUser,
   type Student,
   type InsertStudent,
   type PromptVersion,
-  type InsertPromptVersion
+  type InsertPromptVersion,
+  type PromptTemplate,
+  type Scenario
 } from "@shared/schema";
 
 const MAX_PROMPTS_PER_USER = 50;
@@ -151,6 +155,58 @@ export class DatabaseStorage implements IStorage {
     await db.update(appSettings)
       .set({ isLocked: locked })
       .where(eq(appSettings.id, 1));
+  }
+
+  async getPromptTemplate(): Promise<PromptTemplate | undefined> {
+    const [template] = await db.select().from(promptTemplates).where(eq(promptTemplates.id, 1));
+    return template;
+  }
+
+  async setPromptTemplate(template: string): Promise<void> {
+    const existing = await this.getPromptTemplate();
+    if (existing) {
+      await db.update(promptTemplates)
+        .set({ template, updatedAt: new Date() })
+        .where(eq(promptTemplates.id, 1));
+    } else {
+      await db.insert(promptTemplates).values({ template });
+    }
+  }
+
+  async getScenarios(): Promise<Scenario[]> {
+    return await db.select().from(scenarios).orderBy(scenarios.sortOrder);
+  }
+
+  async getScenario(id: number): Promise<Scenario | undefined> {
+    const [scenario] = await db.select().from(scenarios).where(eq(scenarios.id, id));
+    return scenario;
+  }
+
+  async createScenario(text: string, expected: string, imagePath: string, sortOrder: number): Promise<Scenario> {
+    const [scenario] = await db.insert(scenarios)
+      .values({ text, expected, imagePath, sortOrder })
+      .returning();
+    return scenario;
+  }
+
+  async updateScenario(id: number, updates: Partial<{ text: string; expected: string; imagePath: string; sortOrder: number }>): Promise<Scenario | undefined> {
+    const [scenario] = await db.update(scenarios)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(scenarios.id, id))
+      .returning();
+    return scenario;
+  }
+
+  async deleteScenario(id: number): Promise<void> {
+    await db.delete(scenarios).where(eq(scenarios.id, id));
+  }
+
+  async reorderScenarios(orderedIds: number[]): Promise<void> {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.update(scenarios)
+        .set({ sortOrder: i + 1 })
+        .where(eq(scenarios.id, orderedIds[i]));
+    }
   }
 }
 
