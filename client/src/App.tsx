@@ -187,6 +187,7 @@ function App() {
   const [students, setStudents] = useState<Student[]>([]);
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string } | null>(null);
   const [isAppLocked, setIsAppLocked] = useState(false);
+  const [bypassMobile, setBypassMobile] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -465,17 +466,26 @@ function App() {
 
   return (
     <>
-      <div className="md:hidden min-h-screen bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center p-8">
-        <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-xl">
-          <PawPrint className="w-16 h-16 mx-auto mb-4 text-indigo-600" />
-          <h2 className="text-xl font-bold text-gray-800 mb-3">Desktop Recommended</h2>
-          <p className="text-gray-600">
-            This app isn't meant to be viewed on a mobile device. We recommend switching over to desktop for the best experience.
-          </p>
+      {!bypassMobile && (
+        <div className="md:hidden min-h-screen bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center p-8">
+          <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-xl">
+            <PawPrint className="w-16 h-16 mx-auto mb-4 text-indigo-600" />
+            <h2 className="text-xl font-bold text-gray-800 mb-3">Desktop Recommended</h2>
+            <p className="text-gray-600 mb-4">
+              This app works best on a desktop or laptop computer.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => setBypassMobile(true)}
+              className="text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+            >
+              Continue Anyway
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
       
-      <div className="hidden md:block min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50">
+      <div className={`${bypassMobile ? '' : 'hidden md:block'} min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50`}>
       <header className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-6 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
