@@ -385,6 +385,12 @@ export async function registerRoutes(
         return res.status(403).json({ error: "The app is currently locked by the teacher. Please wait until it's unlocked to run tests." });
       }
 
+      const scenarios = await getActiveScenarios();
+      
+      const templateData = await storage.getPromptTemplate();
+      const promptTemplate = templateData?.template || DEFAULT_PROMPT_TEMPLATE;
+      const fullPrompt = promptTemplate.replace("{{STUDENT_PROMPT}}", moderationInstructions);
+
       if (moderationInstructions.trim().toLowerCase() === "test") {
         const dummyLabels = ["✅ Allowed", "🚫 Prohibited", "⚠️ Disturbing"];
         const dummyResults = scenarios.map((scenario) => {
@@ -449,14 +455,7 @@ export async function registerRoutes(
                       },
                       {
                         type: "text",
-                        text: `${moderationInstructions}
-
-The possible labels are:
-- ✅ Allowed
-- 🚫 Prohibited  
-- ⚠️ Disturbing
-
-Respond with ONLY the label.`
+                        text: fullPrompt
                       }
                     ]
                   }
@@ -538,14 +537,7 @@ Respond with ONLY the label.`
                   content: [
                     {
                       type: "text",
-                      text: `${moderationInstructions}
-
-The possible labels are:
-- ✅ Allowed
-- 🚫 Prohibited  
-- ⚠️ Disturbing
-
-Also describe each image in a short 13 words maximum description.`
+                      text: fullPrompt
                     },
                     {
                       type: "image_url",
