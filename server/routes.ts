@@ -10,6 +10,67 @@ import { storage } from "./storage";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
+const studentRateLimits = new Map<string, number>();
+const RATE_LIMIT_MS = 5000;
+
+let scenariosCache: any[] | null = null;
+let templateCache: string | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 30000;
+
+async function getCachedScenarios() {
+  const now = Date.now();
+  if (scenariosCache && (now - cacheTimestamp) < CACHE_TTL_MS) {
+    return scenariosCache;
+  }
+  scenariosCache = await getActiveScenarios();
+  cacheTimestamp = now;
+  return scenariosCache;
+}
+
+async function getCachedTemplate() {
+  const now = Date.now();
+  if (templateCache && (now - cacheTimestamp) < CACHE_TTL_MS) {
+    return templateCache;
+  }
+  const templateData = await storage.getPromptTemplate();
+  templateCache = templateData?.template || DEFAULT_PROMPT_TEMPLATE;
+  return templateCache;
+}
+
+function invalidateCache() {
+  scenariosCache = null;
+  templateCache = null;
+  cacheTimestamp = 0;
+}
+
+function checkRateLimit(email: string): boolean {
+  const now = Date.now();
+  const lastRequest = studentRateLimits.get(email);
+  if (lastRequest && (now - lastRequest) < RATE_LIMIT_MS) {
+    return false;
+  }
+  studentRateLimits.set(email, now);
+  return true;
+}
+
+async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (attempt === maxRetries - 1) throw error;
+      if (error?.status === 429 || error?.code === 'rate_limit_exceeded') {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
+
 const scenarioUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => {
@@ -119,6 +180,12 @@ export async function registerRoutes(
   wss = new WebSocketServer({ server: httpServer, path: "/ws" });
   
   wss.on("connection", (ws) => {
+    (ws as any).isAlive = true;
+    
+    ws.on("pong", () => {
+      (ws as any).isAlive = true;
+    });
+    
     ws.on("message", async (message) => {
       try {
         const data = JSON.parse(message.toString());
@@ -136,6 +203,25 @@ export async function registerRoutes(
     ws.on("close", () => {
       teacherClients.delete(ws);
     });
+    
+    ws.on("error", () => {
+      teacherClients.delete(ws);
+    });
+  });
+
+  const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if ((ws as any).isAlive === false) {
+        teacherClients.delete(ws);
+        return ws.terminate();
+      }
+      (ws as any).isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wss.on("close", () => {
+    clearInterval(heartbeatInterval);
   });
 
   app.get("/api/scenarios", async (_req, res) => {
@@ -276,6 +362,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Template must include {{STUDENT_PROMPT}} placeholder" });
       }
       await storage.setPromptTemplate(template);
+      invalidateCache();
       res.json({ success: true });
     } catch (error) {
       console.error("Update prompt template error:", error);
@@ -310,6 +397,7 @@ export async function registerRoutes(
       const sortOrder = existingScenarios.length + 1;
       
       const scenario = await storage.createScenario(text, expected, file.filename, sortOrder);
+      invalidateCache();
       res.json(scenario);
     } catch (error) {
       console.error("Create scenario error:", error);
@@ -350,6 +438,7 @@ export async function registerRoutes(
       }
       
       const scenario = await storage.updateScenario(scenarioId, updates);
+      invalidateCache();
       res.json(scenario);
     } catch (error) {
       console.error("Update scenario error:", error);
@@ -375,6 +464,7 @@ export async function registerRoutes(
       }
       
       await storage.deleteScenario(scenarioId);
+      invalidateCache();
       res.json({ success: true });
     } catch (error) {
       console.error("Delete scenario error:", error);
@@ -390,26 +480,32 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Moderation instructions are required" });
       }
 
+      const emailLower = email?.toLowerCase().trim();
+      
+      if (emailLower && moderationInstructions.trim().toLowerCase() !== "test") {
+        if (!checkRateLimit(emailLower)) {
+          return res.status(429).json({ error: "Please wait a few seconds before running another test." });
+        }
+      }
+
       let student = null;
-      if (email) {
-        student = await storage.getOrCreateStudent(email.toLowerCase().trim());
-        await storage.setStudentRunningTest(email.toLowerCase().trim(), true);
+      if (emailLower) {
+        student = await storage.getOrCreateStudent(emailLower);
+        await storage.setStudentRunningTest(emailLower, true);
         await broadcastStudentUpdate();
       }
 
       const isLocked = await storage.isAppLocked();
       if (isLocked && moderationInstructions.trim().toLowerCase() !== "test") {
-        if (student && email) {
-          await storage.setStudentRunningTest(email.toLowerCase().trim(), false);
+        if (student && emailLower) {
+          await storage.setStudentRunningTest(emailLower, false);
           await broadcastStudentUpdate();
         }
         return res.status(403).json({ error: "The app is currently locked by the teacher. Please wait until it's unlocked to run tests." });
       }
 
-      const scenarios = await getActiveScenarios();
-      
-      const templateData = await storage.getPromptTemplate();
-      const promptTemplate = templateData?.template || DEFAULT_PROMPT_TEMPLATE;
+      const scenarios = await getCachedScenarios();
+      const promptTemplate = await getCachedTemplate();
       const fullPrompt = promptTemplate.replace("{{STUDENT_PROMPT}}", moderationInstructions);
 
       if (moderationInstructions.trim().toLowerCase() === "test") {
