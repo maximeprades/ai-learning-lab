@@ -11,6 +11,7 @@ import { storage } from "./storage";
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
 const studentRateLimits = new Map<string, number>();
+const studentInFlight = new Set<string>();
 const RATE_LIMIT_MS = 5000;
 
 let scenariosCache: any[] | null = null;
@@ -44,14 +45,25 @@ function invalidateCache() {
   cacheTimestamp = 0;
 }
 
-function checkRateLimit(email: string): boolean {
+function checkRateLimit(email: string): { allowed: boolean; reason?: string } {
+  if (studentInFlight.has(email)) {
+    return { allowed: false, reason: "You already have a test in progress. Please wait for it to complete." };
+  }
   const now = Date.now();
   const lastRequest = studentRateLimits.get(email);
   if (lastRequest && (now - lastRequest) < RATE_LIMIT_MS) {
-    return false;
+    return { allowed: false, reason: "Please wait a few seconds before running another test." };
   }
-  studentRateLimits.set(email, now);
-  return true;
+  return { allowed: true };
+}
+
+function markInFlight(email: string) {
+  studentRateLimits.set(email, Date.now());
+  studentInFlight.add(email);
+}
+
+function clearInFlight(email: string) {
+  studentInFlight.delete(email);
 }
 
 async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
@@ -483,9 +495,11 @@ export async function registerRoutes(
       const emailLower = email?.toLowerCase().trim();
       
       if (emailLower && moderationInstructions.trim().toLowerCase() !== "test") {
-        if (!checkRateLimit(emailLower)) {
-          return res.status(429).json({ error: "Please wait a few seconds before running another test." });
+        const rateCheck = checkRateLimit(emailLower);
+        if (!rateCheck.allowed) {
+          return res.status(429).json({ error: rateCheck.reason });
         }
+        markInFlight(emailLower);
       }
 
       let student = null;
@@ -499,6 +513,7 @@ export async function registerRoutes(
       if (isLocked && moderationInstructions.trim().toLowerCase() !== "test") {
         if (student && emailLower) {
           await storage.setStudentRunningTest(emailLower, false);
+          clearInFlight(emailLower);
           await broadcastStudentUpdate();
         }
         return res.status(403).json({ error: "The app is currently locked by the teacher. Please wait until it's unlocked to run tests." });
@@ -545,6 +560,7 @@ export async function registerRoutes(
       if (isAnthropicModel) {
         const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
         if (!anthropicApiKey) {
+          if (emailLower) clearInFlight(emailLower);
           return res.status(500).json({ error: "Anthropic API key not configured" });
         }
 
@@ -555,7 +571,7 @@ export async function registerRoutes(
             try {
               const imageBase64 = getImageBase64(scenario.image);
               
-              const response = await anthropic.messages.create({
+              const response = await retryWithBackoff(() => anthropic.messages.create({
                 model: model,
                 max_tokens: 50,
                 messages: [
@@ -577,7 +593,7 @@ export async function registerRoutes(
                     ]
                   }
                 ],
-              });
+              }));
 
               const aiLabel = (response.content[0] as any)?.text?.trim() || "Unknown";
               
@@ -610,8 +626,7 @@ export async function registerRoutes(
 
         const correctCount = results.filter(r => r.isCorrect).length;
 
-        if (student && email) {
-          const emailLower = email.toLowerCase().trim();
+        if (student && emailLower) {
           await storage.setStudentRunningTest(emailLower, false);
           await storage.updateStudentScore(emailLower, correctCount);
           
@@ -625,6 +640,7 @@ export async function registerRoutes(
           }
           
           await broadcastStudentUpdate();
+          clearInFlight(emailLower);
         }
         
         return res.json({
@@ -636,6 +652,7 @@ export async function registerRoutes(
 
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) {
+        if (emailLower) clearInFlight(emailLower);
         return res.status(500).json({ error: "OpenAI API key not configured" });
       }
 
@@ -646,7 +663,7 @@ export async function registerRoutes(
           try {
             const imageBase64 = getImageBase64(scenario.image);
             
-            const response = await openai.chat.completions.create({
+            const response = await retryWithBackoff(() => openai.chat.completions.create({
               model: model,
               messages: [
                 {
@@ -668,7 +685,7 @@ export async function registerRoutes(
               ],
               max_tokens: 20,
               temperature: 0,
-            });
+            }));
 
             const aiLabel = response.choices[0]?.message?.content?.trim() || "Unknown";
             
@@ -701,8 +718,7 @@ export async function registerRoutes(
 
       const correctCount = results.filter(r => r.isCorrect).length;
 
-      if (student && email) {
-        const emailLower = email.toLowerCase().trim();
+      if (student && emailLower) {
         await storage.setStudentRunningTest(emailLower, false);
         await storage.updateStudentScore(emailLower, correctCount);
         
@@ -716,6 +732,7 @@ export async function registerRoutes(
         }
         
         await broadcastStudentUpdate();
+        clearInFlight(emailLower);
       }
       
       res.json({
@@ -725,6 +742,9 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error("Error running test:", error);
+      if (req.body.email) {
+        clearInFlight(req.body.email.toLowerCase().trim());
+      }
       
       const { email } = req.body;
       if (email) {
