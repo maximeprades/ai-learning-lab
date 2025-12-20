@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Upload, Save } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -41,20 +41,14 @@ interface Student {
   lastActive: string | null;
 }
 
-const STORAGE_KEY_EMAIL = "pawpatrol.currentEmail";
+interface Scenario {
+  id: number;
+  text: string;
+  expected: string;
+  image: string;
+}
 
-const scenarios = [
-  { id: 1, text: "A Golden Retriever sleeping on a rug.", expected: "Allowed", image: "/scenarios/1-golden-retriever-sleeping.png" },
-  { id: 2, text: "A sign that says 'Puppies for Sale - $500' next to a box of pups.", expected: "Prohibited", image: "/scenarios/2-puppies-for-sale.png" },
-  { id: 3, text: "A wild wolf howling in the snow.", expected: "Prohibited", image: "/scenarios/3-wolf-howling.png" },
-  { id: 4, text: "A dog with a bandage on its paw at a vet clinic.", expected: "Disturbing", image: "/scenarios/4-dog-at-vet.png" },
-  { id: 5, text: "A dog wearing a lion's mane costume for Halloween.", expected: "Allowed", image: "/scenarios/5-dog-lion-costume.png" },
-  { id: 6, text: "A cartoon drawing of a blue dog.", expected: "Allowed", image: "/scenarios/6-cartoon-blue-dog.png" },
-  { id: 7, text: "A dog baring its teeth and growling at a mailman.", expected: "Prohibited", image: "/scenarios/7-aggressive-dog.png" },
-  { id: 8, text: "A person holding a 'Free to Good Home - Adopt Me!' sign with a dog.", expected: "Allowed", image: "/scenarios/8-adopt-me-sign.png" },
-  { id: 9, text: "A delicious hot dog (sausage in a bun) on a plate with mustard.", expected: "Prohibited", image: "/scenarios/9-hot-dog.png" },
-  { id: 10, text: "A therapy dog sitting quietly on a hospital bed with a patient.", expected: "Allowed", image: "/scenarios/10-therapy-dog.png" },
-];
+const STORAGE_KEY_EMAIL = "pawpatrol.currentEmail";
 
 function getStoredEmail(): string | null {
   return localStorage.getItem(STORAGE_KEY_EMAIL);
@@ -189,13 +183,56 @@ function App() {
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [bypassMobile, setBypassMobile] = useState(false);
   
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [promptTemplate, setPromptTemplate] = useState("");
+  const [defaultTemplate, setDefaultTemplate] = useState("");
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateError, setTemplateError] = useState("");
+  
+  const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
+  const [newScenarioDialog, setNewScenarioDialog] = useState(false);
+  const [scenarioForm, setScenarioForm] = useState({ text: "", expected: "Allowed" });
+  const [scenarioImage, setScenarioImage] = useState<File | null>(null);
+  const [scenarioSaving, setScenarioSaving] = useState(false);
+  
   const wsRef = useRef<WebSocket | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/scenarios")
+      .then(res => res.json())
+      .then(data => setScenarios(data.map((s: any) => ({
+        id: s.id,
+        text: s.text,
+        expected: s.expected,
+        image: `/scenarios/${s.image}`
+      }))))
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (isTeacherMode) {
       fetch("/api/app-lock")
         .then(res => res.json())
         .then(data => setIsAppLocked(data.isLocked))
+        .catch(console.error);
+      
+      fetch("/api/teacher/prompt-template")
+        .then(res => res.json())
+        .then(data => {
+          setPromptTemplate(data.template);
+          setDefaultTemplate(data.defaultTemplate);
+        })
+        .catch(console.error);
+      
+      fetch("/api/teacher/scenarios")
+        .then(res => res.json())
+        .then(data => setScenarios(data.map((s: any) => ({
+          id: s.id,
+          text: s.text,
+          expected: s.expected,
+          image: `/scenarios/${s.image}`
+        }))))
         .catch(console.error);
     }
   }, [isTeacherMode]);
@@ -213,6 +250,119 @@ function App() {
       }
     } catch (error) {
       console.error("Failed to toggle lock:", error);
+    }
+  };
+
+  const savePromptTemplate = async () => {
+    if (!promptTemplate.includes("{{STUDENT_PROMPT}}")) {
+      setTemplateError("Template must include {{STUDENT_PROMPT}} placeholder");
+      return;
+    }
+    setTemplateSaving(true);
+    setTemplateError("");
+    try {
+      const response = await fetch("/api/teacher/prompt-template", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: promptTemplate }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        setTemplateError(data.error || "Failed to save template");
+      }
+    } catch (error) {
+      setTemplateError("Failed to save template");
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
+
+  const resetPromptTemplate = () => {
+    setPromptTemplate(defaultTemplate);
+  };
+
+  const refreshScenarios = async () => {
+    try {
+      const response = await fetch("/api/teacher/scenarios");
+      const data = await response.json();
+      setScenarios(data.map((s: any) => ({
+        id: s.id,
+        text: s.text,
+        expected: s.expected,
+        image: `/scenarios/${s.image}`
+      })));
+    } catch (error) {
+      console.error("Failed to refresh scenarios:", error);
+    }
+  };
+
+  const handleAddScenario = async () => {
+    if (!scenarioForm.text || !scenarioImage) return;
+    setScenarioSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("text", scenarioForm.text);
+      formData.append("expected", scenarioForm.expected);
+      formData.append("image", scenarioImage);
+      
+      const response = await fetch("/api/teacher/scenarios", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (response.ok) {
+        await refreshScenarios();
+        setNewScenarioDialog(false);
+        setScenarioForm({ text: "", expected: "Allowed" });
+        setScenarioImage(null);
+      }
+    } catch (error) {
+      console.error("Failed to add scenario:", error);
+    } finally {
+      setScenarioSaving(false);
+    }
+  };
+
+  const handleUpdateScenario = async () => {
+    if (!editingScenario) return;
+    setScenarioSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("text", scenarioForm.text);
+      formData.append("expected", scenarioForm.expected);
+      if (scenarioImage) {
+        formData.append("image", scenarioImage);
+      }
+      
+      const response = await fetch(`/api/teacher/scenarios/${editingScenario.id}`, {
+        method: "PUT",
+        body: formData,
+      });
+      
+      if (response.ok) {
+        await refreshScenarios();
+        setEditingScenario(null);
+        setScenarioForm({ text: "", expected: "Allowed" });
+        setScenarioImage(null);
+      }
+    } catch (error) {
+      console.error("Failed to update scenario:", error);
+    } finally {
+      setScenarioSaving(false);
+    }
+  };
+
+  const handleDeleteScenario = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this scenario?")) return;
+    try {
+      const response = await fetch(`/api/teacher/scenarios/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        await refreshScenarios();
+      }
+    } catch (error) {
+      console.error("Failed to delete scenario:", error);
     }
   };
 
@@ -555,6 +705,107 @@ function App() {
                 </p>
               </CardContent>
             </Card>
+            <Card className="border-2 border-amber-200 bg-amber-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-amber-800">
+                  <Edit3 className="w-5 h-5" />
+                  AI Prompt Template
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-amber-700">
+                  Edit the prompt sent to the AI. Use <code className="bg-amber-200 px-1 rounded">{"{{STUDENT_PROMPT}}"}</code> where student instructions should be inserted.
+                </p>
+                <Textarea
+                  value={promptTemplate}
+                  onChange={(e) => setPromptTemplate(e.target.value)}
+                  className="min-h-[150px] font-mono text-sm"
+                  placeholder="Enter prompt template..."
+                />
+                {templateError && (
+                  <p className="text-red-600 text-sm">{templateError}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button onClick={savePromptTemplate} disabled={templateSaving}>
+                    {templateSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Save Template
+                  </Button>
+                  <Button variant="outline" onClick={resetPromptTemplate}>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reset to Default
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-orange-200 bg-orange-50">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-orange-800">
+                    <ImageIcon className="w-5 h-5" />
+                    Test Scenarios ({scenarios.length})
+                  </CardTitle>
+                  <Button onClick={() => {
+                    setScenarioForm({ text: "", expected: "Allowed" });
+                    setScenarioImage(null);
+                    setNewScenarioDialog(true);
+                  }} size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Scenario
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  {scenarios.map((scenario) => (
+                    <div key={scenario.id} className="relative group">
+                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
+                        <img
+                          src={scenario.image}
+                          alt={scenario.text}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                        #{scenario.id}
+                      </div>
+                      <div className={`absolute top-1 right-1 text-xs px-2 py-0.5 rounded-full font-bold ${
+                        scenario.expected === "Allowed" ? "bg-green-500 text-white" :
+                        scenario.expected === "Prohibited" ? "bg-red-500 text-white" :
+                        "bg-yellow-500 text-black"
+                      }`}>
+                        {scenario.expected === "Allowed" ? "✅" : scenario.expected === "Prohibited" ? "🚫" : "⚠️"}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-600 line-clamp-2 leading-tight">{scenario.text}</p>
+                      <div className="flex gap-1 mt-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => {
+                            setEditingScenario(scenario);
+                            setScenarioForm({ text: scenario.text, expected: scenario.expected });
+                            setScenarioImage(null);
+                          }}
+                        >
+                          <Edit3 className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-7 text-xs text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={() => handleDeleteScenario(scenario.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
             <TeacherDashboard 
               students={students} 
               onDeleteStudent={(id, email) => setDeleteConfirmDialog({ id, email })}
@@ -839,6 +1090,127 @@ function App() {
             </div>
           )}
           <DialogTitle className="sr-only">Scenario Image</DialogTitle>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={newScenarioDialog} onOpenChange={setNewScenarioDialog}>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add New Scenario
+          </DialogTitle>
+          <div className="space-y-4 pt-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Description</label>
+              <Textarea
+                placeholder="Describe what the image shows..."
+                value={scenarioForm.text}
+                onChange={(e) => setScenarioForm(prev => ({ ...prev, text: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Expected Label</label>
+              <Select value={scenarioForm.expected} onValueChange={(v) => setScenarioForm(prev => ({ ...prev, expected: v }))}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Allowed">✅ Allowed</SelectItem>
+                  <SelectItem value="Prohibited">🚫 Prohibited</SelectItem>
+                  <SelectItem value="Disturbing">⚠️ Disturbing</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Image</label>
+              <div className="mt-1">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => setScenarioImage(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+              </div>
+              {scenarioImage && (
+                <p className="text-xs text-green-600 mt-1">Selected: {scenarioImage.name}</p>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setNewScenarioDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddScenario} disabled={scenarioSaving || !scenarioForm.text || !scenarioImage}>
+                {scenarioSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                Add Scenario
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingScenario !== null} onOpenChange={() => setEditingScenario(null)}>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+            <Edit3 className="w-5 h-5" />
+            Edit Scenario
+          </DialogTitle>
+          <div className="space-y-4 pt-4">
+            {editingScenario && (
+              <div className="w-32 h-32 mx-auto rounded-lg overflow-hidden border-2 border-gray-200">
+                <img
+                  src={editingScenario.image}
+                  alt={editingScenario.text}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700">Description</label>
+              <Textarea
+                placeholder="Describe what the image shows..."
+                value={scenarioForm.text}
+                onChange={(e) => setScenarioForm(prev => ({ ...prev, text: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Expected Label</label>
+              <Select value={scenarioForm.expected} onValueChange={(v) => setScenarioForm(prev => ({ ...prev, expected: v }))}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Allowed">✅ Allowed</SelectItem>
+                  <SelectItem value="Prohibited">🚫 Prohibited</SelectItem>
+                  <SelectItem value="Disturbing">⚠️ Disturbing</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Replace Image (optional)</label>
+              <div className="mt-1">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => setScenarioImage(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+              </div>
+              {scenarioImage && (
+                <p className="text-xs text-green-600 mt-1">New image: {scenarioImage.name}</p>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setEditingScenario(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateScenario} disabled={scenarioSaving || !scenarioForm.text}>
+                {scenarioSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Save Changes
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
