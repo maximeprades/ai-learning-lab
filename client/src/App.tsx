@@ -711,6 +711,28 @@ function App() {
                 </button>
               </div>
             )}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-lg border border-white/40">
+              <Stethoscope className="w-4 h-4 text-white" />
+              <Label htmlFor="prompt-doctor-header" className="text-sm font-medium text-white cursor-pointer hidden sm:inline">
+                Prompt Doctor
+              </Label>
+              <Switch
+                id="prompt-doctor-header"
+                checked={promptDoctorEnabled}
+                onCheckedChange={setPromptDoctorEnabled}
+                className="data-[state=checked]:bg-violet-400"
+              />
+            </div>
+            {promptDoctorFeedback && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPromptDoctorModal(true)}
+                className="bg-white/20 text-white border-white/40 hover:bg-white/30"
+              >
+                <Stethoscope className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={openLeaderboard}
@@ -996,29 +1018,6 @@ function App() {
                     <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku (Anthropic)</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 rounded-lg border border-violet-200">
-                  <Stethoscope className="w-4 h-4 text-violet-600" />
-                  <Label htmlFor="prompt-doctor" className="text-sm font-medium text-violet-700 cursor-pointer">
-                    Prompt Doctor
-                  </Label>
-                  <Switch
-                    id="prompt-doctor"
-                    checked={promptDoctorEnabled}
-                    onCheckedChange={setPromptDoctorEnabled}
-                    className="data-[state=checked]:bg-violet-600"
-                  />
-                </div>
-                {promptDoctorFeedback && !showPromptDoctorModal && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPromptDoctorModal(true)}
-                    className="text-violet-600 border-violet-300 hover:bg-violet-50"
-                  >
-                    <Stethoscope className="w-4 h-4 mr-1" />
-                    View Feedback
-                  </Button>
-                )}
                 <Button 
                   onClick={runTest} 
                   disabled={isLoading || promptDoctorLoading}
