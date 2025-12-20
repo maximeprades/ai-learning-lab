@@ -418,7 +418,7 @@ Also describe each image in a short 13 words maximum description.`
         score: correctCount,
         total: scenarios.length,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error running test:", error);
       
       const { email } = req.body;
@@ -427,7 +427,43 @@ Also describe each image in a short 13 words maximum description.`
         await broadcastStudentUpdate();
       }
       
-      res.status(500).json({ error: "Failed to run test" });
+      // Check for insufficient credits/quota errors
+      const errorMessage = error?.message?.toLowerCase() || "";
+      const errorType = error?.error?.type || error?.type || "";
+      const errorCode = error?.code || error?.error?.code || "";
+      
+      // Anthropic insufficient balance
+      if (errorType === "insufficient_balance_error" || 
+          errorMessage.includes("credit balance is too low") ||
+          errorMessage.includes("insufficient_balance")) {
+        return res.status(402).json({ 
+          error: "Out of API Credits",
+          details: "The Anthropic API credits have run out. Please ask your teacher to add more credits to the Anthropic account, or try using the OpenAI model instead."
+        });
+      }
+      
+      // OpenAI insufficient quota
+      if (errorCode === "insufficient_quota" || 
+          errorMessage.includes("exceeded your current quota") ||
+          errorMessage.includes("insufficient_quota") ||
+          errorMessage.includes("billing")) {
+        return res.status(402).json({ 
+          error: "Out of API Credits",
+          details: "The OpenAI API credits have run out. Please ask your teacher to add more credits to the OpenAI account, or try using the Claude model instead."
+        });
+      }
+      
+      // Rate limit errors
+      if (errorCode === "rate_limit_exceeded" || 
+          errorType === "rate_limit_error" ||
+          errorMessage.includes("rate limit")) {
+        return res.status(429).json({ 
+          error: "Too Many Requests",
+          details: "The API is receiving too many requests. Please wait a moment and try again."
+        });
+      }
+      
+      res.status(500).json({ error: "Failed to run test. Please try again." });
     }
   });
 

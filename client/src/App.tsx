@@ -380,7 +380,8 @@ function App() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to run test");
+        const errorMsg = data.details || data.error || "Failed to run test";
+        throw new Error(errorMsg);
       }
 
       const data: TestResponse = await response.json();
