@@ -5,11 +5,47 @@ import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
 import { WebSocketServer, WebSocket } from "ws";
+import multer from "multer";
 import { storage } from "./storage";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
-const scenarios = [
+const scenarioUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = path.join(process.cwd(), "client", "public", "scenarios");
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, `scenario-${uniqueSuffix}${ext}`);
+    }
+  }),
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PNG, JPEG, and WebP images are allowed"));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+const DEFAULT_PROMPT_TEMPLATE = `{{STUDENT_PROMPT}}
+
+The possible labels are:
+- ✅ Allowed
+- 🚫 Prohibited  
+- ⚠️ Disturbing
+
+Respond with ONLY the label.`;
+
+const defaultScenarios = [
   { id: 1, text: "A Golden Retriever sleeping on a rug.", expected: "Allowed", image: "1-golden-retriever-sleeping.png" },
   { id: 2, text: "A sign that says 'Puppies for Sale - $500' next to a box of pups.", expected: "Prohibited", image: "2-puppies-for-sale.png" },
   { id: 3, text: "A wild wolf howling in the snow.", expected: "Prohibited", image: "3-wolf-howling.png" },
@@ -45,10 +81,40 @@ async function broadcastStudentUpdate() {
   broadcastToTeachers({ type: "students_update", students });
 }
 
+async function initializeDefaults() {
+  const template = await storage.getPromptTemplate();
+  if (!template) {
+    await storage.setPromptTemplate(DEFAULT_PROMPT_TEMPLATE);
+  }
+  
+  const existingScenarios = await storage.getScenarios();
+  if (existingScenarios.length === 0) {
+    for (let i = 0; i < defaultScenarios.length; i++) {
+      const s = defaultScenarios[i];
+      await storage.createScenario(s.text, s.expected, s.image, i + 1);
+    }
+  }
+}
+
+async function getActiveScenarios() {
+  const dbScenarios = await storage.getScenarios();
+  if (dbScenarios.length > 0) {
+    return dbScenarios.map(s => ({
+      id: s.id,
+      text: s.text,
+      expected: s.expected,
+      image: s.imagePath
+    }));
+  }
+  return defaultScenarios;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  await initializeDefaults();
   
   wss = new WebSocketServer({ server: httpServer, path: "/ws" });
   
@@ -72,8 +138,9 @@ export async function registerRoutes(
     });
   });
 
-  app.get("/api/scenarios", (_req, res) => {
-    res.json(scenarios.map(s => ({ id: s.id, text: s.text })));
+  app.get("/api/scenarios", async (_req, res) => {
+    const scenarios = await getActiveScenarios();
+    res.json(scenarios.map(s => ({ id: s.id, text: s.text, image: s.image, expected: s.expected })));
   });
 
   app.post("/api/verify-teacher", (req, res) => {
@@ -162,6 +229,135 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Toggle lock error:", error);
       res.status(500).json({ error: "Failed to toggle lock" });
+    }
+  });
+
+  app.get("/api/teacher/prompt-template", async (_req, res) => {
+    try {
+      const template = await storage.getPromptTemplate();
+      res.json({ 
+        template: template?.template || DEFAULT_PROMPT_TEMPLATE,
+        defaultTemplate: DEFAULT_PROMPT_TEMPLATE
+      });
+    } catch (error) {
+      console.error("Get prompt template error:", error);
+      res.status(500).json({ error: "Failed to get prompt template" });
+    }
+  });
+
+  app.put("/api/teacher/prompt-template", async (req, res) => {
+    try {
+      const { template } = req.body;
+      if (!template || typeof template !== "string") {
+        return res.status(400).json({ error: "Template is required" });
+      }
+      if (!template.includes("{{STUDENT_PROMPT}}")) {
+        return res.status(400).json({ error: "Template must include {{STUDENT_PROMPT}} placeholder" });
+      }
+      await storage.setPromptTemplate(template);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Update prompt template error:", error);
+      res.status(500).json({ error: "Failed to update prompt template" });
+    }
+  });
+
+  app.get("/api/teacher/scenarios", async (_req, res) => {
+    try {
+      const scenarios = await getActiveScenarios();
+      res.json(scenarios);
+    } catch (error) {
+      console.error("Get scenarios error:", error);
+      res.status(500).json({ error: "Failed to get scenarios" });
+    }
+  });
+
+  app.post("/api/teacher/scenarios", scenarioUpload.single("image"), async (req, res) => {
+    try {
+      const { text, expected } = req.body;
+      const file = req.file;
+      
+      if (!text || !expected || !file) {
+        return res.status(400).json({ error: "Text, expected label, and image are required" });
+      }
+      
+      if (!["Allowed", "Prohibited", "Disturbing"].includes(expected)) {
+        return res.status(400).json({ error: "Expected must be Allowed, Prohibited, or Disturbing" });
+      }
+      
+      const existingScenarios = await storage.getScenarios();
+      const sortOrder = existingScenarios.length + 1;
+      
+      const scenario = await storage.createScenario(text, expected, file.filename, sortOrder);
+      res.json(scenario);
+    } catch (error) {
+      console.error("Create scenario error:", error);
+      res.status(500).json({ error: "Failed to create scenario" });
+    }
+  });
+
+  app.put("/api/teacher/scenarios/:id", scenarioUpload.single("image"), async (req, res) => {
+    try {
+      const scenarioId = parseInt(req.params.id);
+      if (isNaN(scenarioId)) {
+        return res.status(400).json({ error: "Invalid scenario ID" });
+      }
+      
+      const existing = await storage.getScenario(scenarioId);
+      if (!existing) {
+        return res.status(404).json({ error: "Scenario not found" });
+      }
+      
+      const { text, expected } = req.body;
+      const file = req.file;
+      
+      const updates: Partial<{ text: string; expected: string; imagePath: string }> = {};
+      
+      if (text) updates.text = text;
+      if (expected) {
+        if (!["Allowed", "Prohibited", "Disturbing"].includes(expected)) {
+          return res.status(400).json({ error: "Expected must be Allowed, Prohibited, or Disturbing" });
+        }
+        updates.expected = expected;
+      }
+      if (file) {
+        const oldImagePath = path.join(process.cwd(), "client", "public", "scenarios", existing.imagePath);
+        if (fs.existsSync(oldImagePath) && !existing.imagePath.match(/^\d+-/)) {
+          fs.unlinkSync(oldImagePath);
+        }
+        updates.imagePath = file.filename;
+      }
+      
+      const scenario = await storage.updateScenario(scenarioId, updates);
+      res.json(scenario);
+    } catch (error) {
+      console.error("Update scenario error:", error);
+      res.status(500).json({ error: "Failed to update scenario" });
+    }
+  });
+
+  app.delete("/api/teacher/scenarios/:id", async (req, res) => {
+    try {
+      const scenarioId = parseInt(req.params.id);
+      if (isNaN(scenarioId)) {
+        return res.status(400).json({ error: "Invalid scenario ID" });
+      }
+      
+      const existing = await storage.getScenario(scenarioId);
+      if (!existing) {
+        return res.status(404).json({ error: "Scenario not found" });
+      }
+      
+      const imagePath = path.join(process.cwd(), "client", "public", "scenarios", existing.imagePath);
+      if (fs.existsSync(imagePath) && !existing.imagePath.match(/^\d+-/)) {
+        fs.unlinkSync(imagePath);
+      }
+      
+      await storage.deleteScenario(scenarioId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete scenario error:", error);
+      res.status(500).json({ error: "Failed to delete scenario" });
     }
   });
 
