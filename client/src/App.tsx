@@ -196,7 +196,7 @@ function App() {
   const [scenarioSaving, setScenarioSaving] = useState(false);
   
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [leaderboardData, setLeaderboardData] = useState<{ email: string; score: number | null; promptCount: number }[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<{ email: string; score: number | null; promptCount: number; hasAttempted: boolean }[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
@@ -1177,13 +1177,13 @@ function App() {
                     </div>
                   </div>
                   <div className="text-right">
-                    {student.score !== null && student.score > 0 ? (
+                    {student.hasAttempted ? (
                       <span className={`text-xl font-bold ${
                         student.score === 10 ? 'text-green-600' :
-                        student.score >= 7 ? 'text-amber-600' :
+                        (student.score ?? 0) >= 7 ? 'text-amber-600' :
                         'text-gray-600'
                       }`}>
-                        {student.score}/10
+                        {student.score ?? 0}/10
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400 italic">No Score Yet</span>

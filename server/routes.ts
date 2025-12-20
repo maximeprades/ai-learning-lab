@@ -146,11 +146,17 @@ export async function registerRoutes(
   app.get("/api/leaderboard", async (_req, res) => {
     try {
       const allStudents = await storage.getAllStudents();
-      const leaderboard = allStudents.map(s => ({
-        email: s.email,
-        score: s.highestScore,
-        promptCount: s.promptCount
-      }));
+      const leaderboard = allStudents
+        .map(s => ({
+          email: s.email,
+          score: s.highestScore,
+          promptCount: s.promptCount,
+          hasAttempted: (s.promptCount ?? 0) > 0
+        }))
+        .sort((a, b) => {
+          if ((b.score ?? 0) !== (a.score ?? 0)) return (b.score ?? 0) - (a.score ?? 0);
+          return (b.promptCount ?? 0) - (a.promptCount ?? 0);
+        });
       res.json(leaderboard);
     } catch (error) {
       console.error("Get leaderboard error:", error);
