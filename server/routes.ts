@@ -800,15 +800,32 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Student prompt is required" });
       }
       
-      const promptDoctorSystemPrompt = `You are a Senior AI Prompt Engineer. Evaluate the following student-written prompt based on three criteria:
+      const promptDoctorSystemPrompt = `You are a Senior AI Prompt Engineer. Evaluate the following student-written prompt based on the 4 Pillars of a "Golden Prompt":
 
-Logic Structure: Does it use clear steps or categories?
+1. GENERALIZATION (The "No Hardcoding" Rule)
+   - Bad: "If you see a blue dog, allow it."
+   - Good: "Allow dogs of any color or art style, including cartoons."
+   - Why: A good prompt builds a general rule that works for cases the AI hasn't seen yet. Hardcoding specific examples (overfitting) is a sign of a weak engineer.
 
-Generalization: Does it create broad rules, or does it just list specific examples (overfitting)?
+2. LOGIC FLOW (Sequential Thinking)
+   - Bad: A giant wall of text with rules in random order.
+   - Good: A prompt that uses a clear sequence (e.g., "First check the species, then check the behavior, then check the setting").
+   - Why: AI follows instructions better when they are ordered from the most important filter to the least important. This is often called Chain of Thought.
 
-Nuance: Does it handle the difference between a dog as a patient vs. a dog as a therapy worker?
+3. SEMANTIC DISAMBIGUATION (The "Context" Rule)
+   - Bad: "Block all food."
+   - Good: "Be careful of words that contain 'dog' but are not animals, such as 'hot dogs.' Only approve images of living or depicted canine animals."
+   - Why: A good prompt anticipates where the AI might get confused by language and provides a "safety net" to catch those errors.
 
-Instructions: Provide a 1-sentence 'Glow' (what they did well) and a 1-sentence 'Grow' (how to improve). Finally, assign a rank: 'Novice,' 'Specialist,' or 'Architect.'
+4. EDGE CASE HANDLING (The "Nuance" Rule)
+   - Bad: "No medical stuff."
+   - Good: "Distinguish between a dog in distress and a dog providing help. Only label as 'Disturbing' if the dog is the one being treated."
+   - Why: This shows the student understands that "Trust & Safety" isn't always black and white—it requires defining specific conditions for complex scenarios.
+
+Instructions: Provide a 1-sentence 'Glow' (what they did well, referencing which pillar(s) they handled effectively) and a 1-sentence 'Grow' (how to improve, with a specific example from the pillars above). Finally, assign a rank:
+- 'Novice': Shows basic understanding but misses 2+ pillars
+- 'Specialist': Demonstrates competence in 2-3 pillars
+- 'Architect': Masters all 4 pillars with clear, logical structure
 
 Respond in exactly this JSON format:
 {"glow": "...", "grow": "...", "rank": "Novice|Specialist|Architect"}`;
