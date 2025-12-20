@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Upload, Save } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Upload, Save, RefreshCw } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -195,6 +195,10 @@ function App() {
   const [scenarioImage, setScenarioImage] = useState<File | null>(null);
   const [scenarioSaving, setScenarioSaving] = useState(false);
   
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState<{ email: string; score: number | null; promptCount: number }[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -364,6 +368,24 @@ function App() {
     } catch (error) {
       console.error("Failed to delete scenario:", error);
     }
+  };
+
+  const fetchLeaderboard = async () => {
+    setLeaderboardLoading(true);
+    try {
+      const response = await fetch("/api/leaderboard");
+      const data = await response.json();
+      setLeaderboardData(data);
+    } catch (error) {
+      console.error("Failed to fetch leaderboard:", error);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
+
+  const openLeaderboard = () => {
+    setShowLeaderboard(true);
+    fetchLeaderboard();
   };
 
   useEffect(() => {
@@ -658,6 +680,14 @@ function App() {
                 </button>
               </div>
             )}
+            <Button
+              variant="outline"
+              onClick={openLeaderboard}
+              className="flex items-center gap-2 bg-white/20 text-white border-white/40 hover:bg-white/30"
+            >
+              <Trophy className="w-4 h-4" />
+              <span className="hidden sm:inline">Leaderboard</span>
+            </Button>
             <Button
               variant="outline"
               onClick={toggleTeacherMode}
@@ -1090,6 +1120,79 @@ function App() {
             </div>
           )}
           <DialogTitle className="sr-only">Scenario Image</DialogTitle>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showLeaderboard} onOpenChange={setShowLeaderboard}>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="text-lg font-semibold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-amber-500" />
+              Leaderboard
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchLeaderboard}
+              disabled={leaderboardLoading}
+              className="ml-4"
+            >
+              {leaderboardLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+            </Button>
+          </DialogTitle>
+          <div className="space-y-2 pt-4 max-h-[400px] overflow-y-auto">
+            {leaderboardLoading && leaderboardData.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+              </div>
+            ) : leaderboardData.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">No students yet</p>
+            ) : (
+              leaderboardData.map((student, index) => (
+                <div
+                  key={student.email}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
+                    index === 0 ? 'bg-amber-100 border-2 border-amber-300' :
+                    index === 1 ? 'bg-gray-100 border-2 border-gray-300' :
+                    index === 2 ? 'bg-orange-100 border-2 border-orange-300' :
+                    'bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`text-lg font-bold ${
+                      index === 0 ? 'text-amber-600' :
+                      index === 1 ? 'text-gray-600' :
+                      index === 2 ? 'text-orange-600' :
+                      'text-gray-500'
+                    }`}>
+                      #{index + 1}
+                    </span>
+                    <div>
+                      <p className="font-medium text-gray-800">{student.email}</p>
+                      <p className="text-xs text-gray-500">{student.promptCount || 0} prompts tried</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {student.score !== null && student.score > 0 ? (
+                      <span className={`text-xl font-bold ${
+                        student.score === 10 ? 'text-green-600' :
+                        student.score >= 7 ? 'text-amber-600' :
+                        'text-gray-600'
+                      }`}>
+                        {student.score}/10
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400 italic">No Score Yet</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
