@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Upload, Save, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Upload, Save, RefreshCw, Stethoscope } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -198,6 +200,11 @@ function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<{ email: string; score: number | null; promptCount: number; hasAttempted: boolean }[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  
+  const [promptDoctorEnabled, setPromptDoctorEnabled] = useState(false);
+  const [promptDoctorFeedback, setPromptDoctorFeedback] = useState<{ glow: string; grow: string; rank: string } | null>(null);
+  const [showPromptDoctorModal, setShowPromptDoctorModal] = useState(false);
+  const [promptDoctorLoading, setPromptDoctorLoading] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -558,6 +565,30 @@ function App() {
 
       const data: TestResponse = await response.json();
       setResults(data);
+
+      if (promptDoctorEnabled) {
+        setPromptDoctorLoading(true);
+        try {
+          const doctorResponse = await fetch("/api/prompt-doctor", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              studentPrompt: instructions,
+              model: selectedModel
+            }),
+          });
+          
+          if (doctorResponse.ok) {
+            const feedback = await doctorResponse.json();
+            setPromptDoctorFeedback(feedback);
+            setShowPromptDoctorModal(true);
+          }
+        } catch (doctorErr) {
+          console.error("Prompt Doctor error:", doctorErr);
+        } finally {
+          setPromptDoctorLoading(false);
+        }
+      }
 
       if (email) {
         const loginResponse = await fetch("/api/student/login", {
@@ -965,9 +996,32 @@ function App() {
                     <SelectItem value="claude-3-haiku-20240307">Claude 3 Haiku (Anthropic)</SelectItem>
                   </SelectContent>
                 </Select>
+                <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 rounded-lg border border-violet-200">
+                  <Stethoscope className="w-4 h-4 text-violet-600" />
+                  <Label htmlFor="prompt-doctor" className="text-sm font-medium text-violet-700 cursor-pointer">
+                    Prompt Doctor
+                  </Label>
+                  <Switch
+                    id="prompt-doctor"
+                    checked={promptDoctorEnabled}
+                    onCheckedChange={setPromptDoctorEnabled}
+                    className="data-[state=checked]:bg-violet-600"
+                  />
+                </div>
+                {promptDoctorFeedback && !showPromptDoctorModal && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPromptDoctorModal(true)}
+                    className="text-violet-600 border-violet-300 hover:bg-violet-50"
+                  >
+                    <Stethoscope className="w-4 h-4 mr-1" />
+                    View Feedback
+                  </Button>
+                )}
                 <Button 
                   onClick={runTest} 
-                  disabled={isLoading}
+                  disabled={isLoading || promptDoctorLoading}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2"
                   size="lg"
                 >
@@ -975,6 +1029,11 @@ function App() {
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Testing...
+                    </>
+                  ) : promptDoctorLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analyzing...
                     </>
                   ) : (
                     "🧪 Run Test"
@@ -1432,6 +1491,53 @@ function App() {
               Enter as Teacher
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPromptDoctorModal} onOpenChange={setShowPromptDoctorModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-violet-700">
+              <Stethoscope className="w-5 h-5" />
+              Prompt Doctor Feedback
+            </DialogTitle>
+            <DialogDescription>
+              Here's what the Prompt Doctor thinks about your moderation prompt
+            </DialogDescription>
+          </DialogHeader>
+          {promptDoctorFeedback && (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">✨</span>
+                  <h4 className="font-semibold text-green-800">Glow</h4>
+                </div>
+                <p className="text-green-700">{promptDoctorFeedback.glow}</p>
+              </div>
+              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">🌱</span>
+                  <h4 className="font-semibold text-amber-800">Grow</h4>
+                </div>
+                <p className="text-amber-700">{promptDoctorFeedback.grow}</p>
+              </div>
+              <div className="p-4 bg-violet-50 rounded-lg border border-violet-200 text-center">
+                <p className="text-sm text-violet-600 mb-1">Your Prompt Engineering Rank</p>
+                <p className="text-2xl font-bold text-violet-800">
+                  {promptDoctorFeedback.rank === "Architect" && "🏆 "}
+                  {promptDoctorFeedback.rank === "Specialist" && "⭐ "}
+                  {promptDoctorFeedback.rank === "Novice" && "🌟 "}
+                  {promptDoctorFeedback.rank}
+                </p>
+              </div>
+              <Button 
+                onClick={() => setShowPromptDoctorModal(false)} 
+                className="w-full bg-violet-600 hover:bg-violet-700"
+              >
+                Got it!
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       </div>

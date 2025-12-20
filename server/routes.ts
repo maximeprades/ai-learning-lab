@@ -792,5 +792,91 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/prompt-doctor", async (req, res) => {
+    try {
+      const { studentPrompt, model } = req.body;
+      
+      if (!studentPrompt || !studentPrompt.trim()) {
+        return res.status(400).json({ error: "Student prompt is required" });
+      }
+      
+      const promptDoctorSystemPrompt = `You are a Senior AI Prompt Engineer. Evaluate the following student-written prompt based on three criteria:
+
+Logic Structure: Does it use clear steps or categories?
+
+Generalization: Does it create broad rules, or does it just list specific examples (overfitting)?
+
+Nuance: Does it handle the difference between a dog as a patient vs. a dog as a therapy worker?
+
+Instructions: Provide a 1-sentence 'Glow' (what they did well) and a 1-sentence 'Grow' (how to improve). Finally, assign a rank: 'Novice,' 'Specialist,' or 'Architect.'
+
+Respond in exactly this JSON format:
+{"glow": "...", "grow": "...", "rank": "Novice|Specialist|Architect"}`;
+
+      const userMessage = `Student Prompt to Evaluate:\n\n${studentPrompt}`;
+      
+      const isAnthropicModel = model && model.startsWith("claude");
+      
+      if (isAnthropicModel) {
+        const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+        if (!anthropicApiKey) {
+          return res.status(500).json({ error: "Anthropic API key not configured" });
+        }
+        
+        const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+        
+        const response = await retryWithBackoff(() => 
+          anthropic.messages.create({
+            model: model,
+            max_tokens: 500,
+            system: promptDoctorSystemPrompt,
+            messages: [{ role: "user", content: userMessage }]
+          })
+        );
+        
+        const textContent = response.content.find(c => c.type === "text");
+        const responseText = textContent ? textContent.text : "";
+        
+        try {
+          const parsed = JSON.parse(responseText);
+          return res.json(parsed);
+        } catch {
+          return res.json({ glow: responseText, grow: "", rank: "Novice" });
+        }
+      }
+      
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "OpenAI API key not configured" });
+      }
+      
+      const openai = new OpenAI({ apiKey });
+      
+      const response = await retryWithBackoff(() => 
+        openai.chat.completions.create({
+          model: model || "gpt-4o-mini",
+          messages: [
+            { role: "system", content: promptDoctorSystemPrompt },
+            { role: "user", content: userMessage }
+          ],
+          max_tokens: 500
+        })
+      );
+      
+      const responseText = response.choices[0]?.message?.content || "";
+      
+      try {
+        const parsed = JSON.parse(responseText);
+        return res.json(parsed);
+      } catch {
+        return res.json({ glow: responseText, grow: "", rank: "Novice" });
+      }
+      
+    } catch (error: any) {
+      console.error("Prompt Doctor error:", error);
+      res.status(500).json({ error: "Failed to evaluate prompt" });
+    }
+  });
+
   return httpServer;
 }
