@@ -143,6 +143,21 @@ export async function registerRoutes(
     res.json(scenarios.map(s => ({ id: s.id, text: s.text, image: s.image, expected: s.expected })));
   });
 
+  app.get("/api/leaderboard", async (_req, res) => {
+    try {
+      const allStudents = await storage.getAllStudents();
+      const leaderboard = allStudents.map(s => ({
+        email: s.email,
+        score: s.highestScore,
+        promptCount: s.promptCount
+      }));
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Get leaderboard error:", error);
+      res.status(500).json({ error: "Failed to get leaderboard" });
+    }
+  });
+
   app.post("/api/verify-teacher", (req, res) => {
     const { password } = req.body;
     if (password === TEACHER_PASSWORD) {
