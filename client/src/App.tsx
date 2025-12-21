@@ -922,7 +922,7 @@ function App() {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-green-600 font-bold">✅</span>
-                  <span><strong>Allowed:</strong> Only real dogs or friendly dog-related content</span>
+                  <span><strong>Allowed:</strong> Real dogs or friendly dog-related content</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-red-600 font-bold">🚫</span>
