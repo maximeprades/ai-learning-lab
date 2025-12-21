@@ -926,7 +926,7 @@ function App() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-red-600 font-bold">🚫</span>
-                  <span><strong>Prohibited:</strong> No selling dogs, no wild animals (wolves), no aggressive behavior, no food that sounds like "dog"</span>
+                  <span><strong>Prohibited:</strong> No selling dogs, no wild animals (wolves), no aggressive behavior, no dog-sounding food</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600 font-bold">⚠️</span>
