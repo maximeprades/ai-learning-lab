@@ -930,7 +930,7 @@ function App() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-yellow-600 font-bold">⚠️</span>
-                  <span><strong>Disturbing:</strong> Medical situations or injuries (even at a vet)</span>
+                  <span><strong>Disturbing:</strong> Medical situations or injuries involving dogs (even at a vet)</span>
                 </li>
               </ul>
               <div className="mt-4 p-3 bg-blue-100 rounded-lg">
