@@ -1,10 +1,19 @@
-# Project Paw-Patrol: AI Safety Lab
+# AI Learning Lab
 
 ## Overview
 
-This is an educational web application called "Project Paw-Patrol" designed for middle school classroom activities. Students act as "Trust & Safety Engineers" and write moderation rules (prompts) that are tested against 10 predefined content scenarios. The application uses OpenAI's API to classify content based on student-written instructions and displays results showing how well their rules performed.
+This is an educational web application platform called "AI Learning Lab" designed for middle school classroom activities. The platform hosts multiple educational games teaching AI concepts:
 
-The app evaluates content using three labels: ✅ Allowed, 🚫 Prohibited, and ⚠️ Disturbing, comparing AI responses against expected classifications for scenarios involving dog-related content.
+### Games Available:
+1. **Precision & Recall Game** - External game at precision-recall.replit.app
+2. **Prompt 101: AI Safety Lab** - Students act as "Trust & Safety Engineers" writing moderation prompts tested against 10 dog-related content scenarios
+3. **PRD Generator** - Tool that transforms student app ideas into Replit-optimized PRDs using Claude AI
+
+### Routes:
+- `/` - Homepage with game selection
+- `/safety-lab` - Prompt 101: AI Safety Lab game
+- `/prd-generator` - PRD Generator tool
+- `/teacher` - Teacher Dashboard (password protected)
 
 ## User Preferences
 
@@ -26,6 +35,10 @@ Preferred communication style: Simple, everyday language.
 - **Key Endpoints**:
   - `GET /api/scenarios` - Returns the 10 test scenarios
   - `POST /api/run-test` - Accepts moderation instructions and returns classification results
+  - `POST /api/generate-prd` - Generates PRD from student app idea using Claude AI (rate limited: 5/day per IP)
+  - `GET/PUT /api/teacher/prompt-template` - Manage AI prompt template
+  - `GET/POST/PUT/DELETE /api/teacher/scenarios` - Manage test scenarios
+  - `POST /api/verify-teacher` - Authenticate teacher access
 
 ### Build System
 - **Development**: Vite dev server with HMR for frontend, tsx for backend
@@ -58,7 +71,8 @@ Preferred communication style: Simple, everyday language.
 
 ### AI Integration
 - **OpenAI API**: Used for content classification via `openai` npm package
-- **API Key**: Requires `OPENAI_API_KEY` environment variable/secret
+- **Anthropic API**: Used for PRD generation via `@anthropic-ai/sdk` npm package
+- **API Keys**: Requires `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` environment secrets
 
 ### Database
 - **PostgreSQL**: Primary database (requires `DATABASE_URL` environment variable)
