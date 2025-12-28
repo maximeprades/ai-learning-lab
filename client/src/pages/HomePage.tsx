@@ -1,71 +1,80 @@
-import { PawPrint, Target, FileText, Shield } from "lucide-react";
+import { PawPrint, Target, FileText, Shield, ArrowRight } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-violet-900 flex items-center justify-center p-8">
-      <div className="max-w-5xl w-full">
+    <div className="min-h-screen bg-gradient-to-b from-white to-stone-50 flex items-center justify-center p-8">
+      <div className="max-w-4xl w-full">
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-white mb-4">
+          <h1 className="text-4xl md:text-5xl font-semibold text-gray-800 mb-3 tracking-tight">
             AI Learning Lab
           </h1>
-          <p className="text-xl text-indigo-200">
+          <p className="text-lg text-gray-500 font-light">
             Choose your adventure
           </p>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <a href="/precision-recall">
-            <button className="group relative w-full h-64 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-emerald-500/30 hover:shadow-[0_20px_60px_-15px] focus:outline-none focus:ring-4 focus:ring-emerald-400/50">
-              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-xl md:text-2xl font-bold text-white text-center group-hover:translate-y-[-4px] transition-transform duration-300">
-                  Precision and Recall Game
-                </h2>
+        <div className="grid md:grid-cols-3 gap-5 mb-10">
+          <a href="/precision-recall" className="group">
+            <div className="h-56 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-lg hover:border-emerald-200 hover:-translate-y-1">
+              <div className="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-emerald-100 group-hover:scale-110">
+                <Target className="w-7 h-7 text-emerald-600" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-            </button>
+              <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
+                Precision & Recall
+              </h2>
+              <p className="text-sm text-gray-400 text-center mb-3">
+                Learn ML metrics
+              </p>
+              <div className="flex items-center gap-1 text-emerald-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span>Start</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
           </a>
           
-          <a href="/safety-lab">
-            <button className="group relative w-full h-64 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-violet-500/30 hover:shadow-[0_20px_60px_-15px] focus:outline-none focus:ring-4 focus:ring-violet-400/50">
-              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500">
-                  <PawPrint className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-xl md:text-2xl font-bold text-white text-center group-hover:translate-y-[-4px] transition-transform duration-300">
-                  Prompt 101: AI Safety Lab
-                </h2>
+          <a href="/safety-lab" className="group">
+            <div className="h-56 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-lg hover:border-violet-200 hover:-translate-y-1">
+              <div className="w-14 h-14 rounded-xl bg-violet-50 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-violet-100 group-hover:scale-110">
+                <PawPrint className="w-7 h-7 text-violet-600" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-            </button>
+              <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
+                AI Safety Lab
+              </h2>
+              <p className="text-sm text-gray-400 text-center mb-3">
+                Write moderation prompts
+              </p>
+              <div className="flex items-center gap-1 text-violet-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span>Start</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
           </a>
           
-          <a href="/prd-generator">
-            <button className="group relative w-full h-64 bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-orange-500/30 hover:shadow-[0_20px_60px_-15px] focus:outline-none focus:ring-4 focus:ring-orange-400/50">
-              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500">
-                  <FileText className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-xl md:text-2xl font-bold text-white text-center group-hover:translate-y-[-4px] transition-transform duration-300">
-                  PRD Generator
-                </h2>
+          <a href="/prd-generator" className="group">
+            <div className="h-56 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-lg hover:border-amber-200 hover:-translate-y-1">
+              <div className="w-14 h-14 rounded-xl bg-amber-50 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-amber-100 group-hover:scale-110">
+                <FileText className="w-7 h-7 text-amber-600" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-            </button>
+              <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
+                PRD Generator
+              </h2>
+              <p className="text-sm text-gray-400 text-center mb-3">
+                Build your app idea
+              </p>
+              <div className="flex items-center gap-1 text-amber-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span>Start</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
           </a>
         </div>
 
         <div className="flex justify-center">
-          <a href="/teacher">
-            <button className="group flex items-center gap-3 px-6 py-3 bg-white/10 border border-white/30 rounded-xl text-white hover:bg-white/20 transition-all duration-300">
-              <Shield className="w-5 h-5" />
-              <span className="font-medium">Teacher Dashboard</span>
-            </button>
+          <a href="/teacher" className="group">
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-200 bg-white text-gray-600 transition-all duration-300 hover:border-gray-300 hover:shadow-sm hover:text-gray-800">
+              <Shield className="w-4 h-4" />
+              <span className="text-sm font-medium">Teacher Dashboard</span>
+            </div>
           </a>
         </div>
       </div>
