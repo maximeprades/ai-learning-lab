@@ -336,30 +336,6 @@ export default function PRDGenerator() {
           </p>
         </section>
 
-        <section className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-6 h-6 text-orange-500" />
-            </div>
-            <h3 className="font-semibold text-gray-800 mb-2">Step 1</h3>
-            <p className="text-gray-600 text-sm">Describe your app idea</p>
-          </div>
-          <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-6 h-6 text-orange-500" />
-            </div>
-            <h3 className="font-semibold text-gray-800 mb-2">Step 2</h3>
-            <p className="text-gray-600 text-sm">AI creates your PRD</p>
-          </div>
-          <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
-              <Rocket className="w-6 h-6 text-orange-500" />
-            </div>
-            <h3 className="font-semibold text-gray-800 mb-2">Step 3</h3>
-            <p className="text-gray-600 text-sm">Build it in Replit</p>
-          </div>
-        </section>
-
         <Card className="mb-8">
           <CardContent className="p-6 md:p-8">
             <label className="block text-lg font-semibold text-gray-800 mb-2">
