@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 
 export function GameScreen() {
   const { 
@@ -93,8 +93,13 @@ export function GameScreen() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto space-y-4">
         <div className="flex justify-between items-center">
-          <div className="text-lg font-semibold text-indigo-800">
-            Round {currentRound} of {totalRounds}
+          <div className="flex items-center gap-4">
+            <a href="/" className="text-gray-600 hover:text-gray-800">
+              <ArrowLeft className="w-5 h-5" />
+            </a>
+            <div className="text-lg font-semibold text-indigo-800">
+              Round {currentRound} of {totalRounds}
+            </div>
           </div>
           <div className="text-lg font-semibold text-green-700">
             Score: {score}
