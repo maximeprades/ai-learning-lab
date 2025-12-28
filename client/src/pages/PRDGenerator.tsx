@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import ReactMarkdown from "react-markdown";
 import { 
   FileText, 
   ArrowLeft, 
@@ -62,6 +63,8 @@ export default function PRDGenerator() {
   const [generationCount, setGenerationCount] = useState(0);
   const [showExampleSection, setShowExampleSection] = useState(false);
   const [showTips, setShowTips] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Claude AI is crafting a detailed plan for your app. This usually takes 15-30 seconds.");
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("prd_generation_data");
@@ -78,6 +81,15 @@ export default function PRDGenerator() {
         localStorage.setItem("prd_generation_data", JSON.stringify({ date: new Date().toDateString(), count: 0 }));
       }
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
+    };
   }, []);
 
   const updateGenerationCount = (newCount: number) => {
@@ -97,6 +109,11 @@ export default function PRDGenerator() {
 
     setStep("loading");
     setError("");
+    setLoadingMessage("Claude AI is crafting a detailed plan for your app. This usually takes 15-30 seconds.");
+    
+    loadingTimerRef.current = setTimeout(() => {
+      setLoadingMessage("This is taking longer than expected... Please hang tight!");
+    }, 30000);
 
     const selectedReqs = optionalReqs.filter(r => r.checked).map(r => r.label);
 
@@ -115,6 +132,7 @@ export default function PRDGenerator() {
       });
 
       clearTimeout(timeout);
+      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
 
       if (!response.ok) {
         const data = await response.json();
@@ -132,6 +150,7 @@ export default function PRDGenerator() {
       updateGenerationCount(generationCount + 1);
       setStep("result");
     } catch (err: any) {
+      if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
       if (err.name === "AbortError") {
         setError("Request timed out. Please try again with a simpler idea.");
       } else {
@@ -198,7 +217,7 @@ export default function PRDGenerator() {
               <Loader2 className="w-16 h-16 text-orange-500 animate-spin mx-auto mb-6" />
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Generating Your PRD...</h2>
               <p className="text-gray-600">
-                Claude AI is crafting a detailed plan for your app. This usually takes 15-30 seconds.
+                {loadingMessage}
               </p>
             </CardContent>
           </Card>
@@ -279,10 +298,8 @@ export default function PRDGenerator() {
 
           <Card>
             <CardContent className="p-6 md:p-8">
-              <div className="prose prose-gray max-w-none">
-                <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 bg-white p-6 rounded-lg border overflow-x-auto leading-relaxed">
-                  {generatedPRD}
-                </pre>
+              <div className="prose prose-gray max-w-none prose-headings:text-gray-800 prose-h1:text-2xl prose-h2:text-xl prose-h2:border-b prose-h2:pb-2 prose-h2:mb-4 prose-p:text-gray-700 prose-li:text-gray-700 prose-strong:text-gray-800">
+                <ReactMarkdown>{generatedPRD}</ReactMarkdown>
               </div>
             </CardContent>
           </Card>
