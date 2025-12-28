@@ -337,6 +337,9 @@ function App() {
       <header className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-6 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <a href="/" className="text-white/80 hover:text-white">
+              <ChevronLeft className="w-6 h-6" />
+            </a>
             <PawPrint className="w-10 h-10" />
             <h1 className="text-2xl md:text-3xl font-bold">
               Prompt 101: AI Safety Lab

@@ -180,16 +180,29 @@ export default function PRDGenerator() {
 
   if (step === "loading") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
-            <Loader2 className="w-16 h-16 text-orange-500 animate-spin mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Generating Your PRD...</h2>
-            <p className="text-gray-600">
-              Claude AI is crafting a detailed plan for your app. This usually takes 15-30 seconds.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100">
+        <header className="bg-white/80 backdrop-blur-sm border-b">
+          <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
+            <a href="/" className="text-gray-600 hover:text-gray-800">
+              <ArrowLeft className="w-5 h-5" />
+            </a>
+            <div className="flex items-center gap-2">
+              <FileText className="w-6 h-6 text-orange-500" />
+              <span className="font-bold text-gray-800">PRD Generator</span>
+            </div>
+          </div>
+        </header>
+        <div className="flex items-center justify-center p-4" style={{ minHeight: 'calc(100vh - 60px)' }}>
+          <Card className="w-full max-w-md">
+            <CardContent className="p-8 text-center">
+              <Loader2 className="w-16 h-16 text-orange-500 animate-spin mx-auto mb-6" />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Generating Your PRD...</h2>
+              <p className="text-gray-600">
+                Claude AI is crafting a detailed plan for your app. This usually takes 15-30 seconds.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -199,9 +212,14 @@ export default function PRDGenerator() {
       <div className="min-h-screen bg-gray-100">
         <header className="bg-white border-b sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Your PRD is Ready!</h1>
-              <p className="text-gray-600 text-sm">Review your plan, then copy it to Replit</p>
+            <div className="flex items-center gap-4">
+              <a href="/" className="text-gray-600 hover:text-gray-800">
+                <ArrowLeft className="w-5 h-5" />
+              </a>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Your PRD is Ready!</h1>
+                <p className="text-gray-600 text-sm">Review your plan, then copy it to Replit</p>
+              </div>
             </div>
             <div className="hidden md:flex gap-2">
               <Button onClick={handleCopy} className="bg-orange-500 hover:bg-orange-600">
