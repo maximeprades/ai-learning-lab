@@ -5,12 +5,13 @@
 This is an educational web application platform called "AI Learning Lab" designed for middle school classroom activities. The platform hosts multiple educational games teaching AI concepts:
 
 ### Games Available:
-1. **Precision & Recall Game** - External game at precision-recall.replit.app
+1. **Precision & Recall Game** - Internal game at /precision-recall teaching ML evaluation metrics through interactive animal classification (5 rounds, client-side Zustand store)
 2. **Prompt 101: AI Safety Lab** - Students act as "Trust & Safety Engineers" writing moderation prompts tested against 10 dog-related content scenarios
 3. **PRD Generator** - Tool that transforms student app ideas into Replit-optimized PRDs using Claude AI
 
 ### Routes:
 - `/` - Homepage with game selection
+- `/precision-recall` - Precision & Recall game (client-side)
 - `/safety-lab` - Prompt 101: AI Safety Lab game
 - `/prd-generator` - PRD Generator tool
 - `/teacher` - Teacher Dashboard (password protected)
