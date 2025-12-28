@@ -280,7 +280,7 @@ export default function PRDGenerator() {
           <Card>
             <CardContent className="p-6 md:p-8">
               <div className="prose prose-gray max-w-none">
-                <pre className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-6 rounded-lg border overflow-x-auto">
+                <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 bg-white p-6 rounded-lg border overflow-x-auto leading-relaxed">
                   {generatedPRD}
                 </pre>
               </div>
