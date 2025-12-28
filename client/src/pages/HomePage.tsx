@@ -15,8 +15,8 @@ export default function HomePage() {
         
         <div className="grid md:grid-cols-3 gap-5 mb-10">
           <a href="/precision-recall" className="group">
-            <div className="h-56 bg-white rounded-2xl border border-gray-200 shadow-md p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-emerald-300 hover:-translate-y-1">
-              <div className="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-emerald-100 group-hover:scale-110">
+            <div className="h-56 bg-gradient-to-br from-white to-emerald-50 rounded-2xl border-2 border-emerald-100 shadow-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-emerald-400 hover:-translate-y-1">
+              <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-emerald-200 group-hover:scale-110">
                 <Target className="w-7 h-7 text-emerald-600" />
               </div>
               <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
@@ -33,8 +33,8 @@ export default function HomePage() {
           </a>
           
           <a href="/safety-lab" className="group">
-            <div className="h-56 bg-white rounded-2xl border border-gray-200 shadow-md p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-violet-300 hover:-translate-y-1">
-              <div className="w-14 h-14 rounded-xl bg-violet-50 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-violet-100 group-hover:scale-110">
+            <div className="h-56 bg-gradient-to-br from-white to-violet-50 rounded-2xl border-2 border-violet-100 shadow-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-violet-400 hover:-translate-y-1">
+              <div className="w-14 h-14 rounded-xl bg-violet-100 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-violet-200 group-hover:scale-110">
                 <PawPrint className="w-7 h-7 text-violet-600" />
               </div>
               <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
@@ -51,8 +51,8 @@ export default function HomePage() {
           </a>
           
           <a href="/prd-generator" className="group">
-            <div className="h-56 bg-white rounded-2xl border border-gray-200 shadow-md p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-amber-300 hover:-translate-y-1">
-              <div className="w-14 h-14 rounded-xl bg-amber-50 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-amber-100 group-hover:scale-110">
+            <div className="h-56 bg-gradient-to-br from-white to-amber-50 rounded-2xl border-2 border-amber-100 shadow-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-amber-400 hover:-translate-y-1">
+              <div className="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-amber-200 group-hover:scale-110">
                 <FileText className="w-7 h-7 text-amber-600" />
               </div>
               <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
