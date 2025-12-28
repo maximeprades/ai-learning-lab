@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import SafetyLab from "./App";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import PRDGenerator from "./pages/PRDGenerator";
+import PrecisionRecallGame from "./pages/PrecisionRecallGame";
 import "./index.css";
 
 function RootApp() {
@@ -14,6 +15,7 @@ function RootApp() {
       <Route path="/safety-lab" component={SafetyLab} />
       <Route path="/teacher" component={TeacherDashboard} />
       <Route path="/prd-generator" component={PRDGenerator} />
+      <Route path="/precision-recall" component={PrecisionRecallGame} />
       <Route>
         <div className="min-h-screen flex items-center justify-center">
           <p>Page not found</p>

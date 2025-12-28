@@ -14,7 +14,7 @@ export default function HomePage() {
         </div>
         
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <a href="https://precision-recall.replit.app" target="_blank" rel="noopener noreferrer">
+          <a href="/precision-recall">
             <button className="group relative w-full h-64 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-emerald-500/30 hover:shadow-[0_20px_60px_-15px] focus:outline-none focus:ring-4 focus:ring-emerald-400/50">
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
