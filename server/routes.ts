@@ -895,5 +895,134 @@ Respond in exactly this JSON format:
     }
   });
 
+  const prdRateLimits = new Map<string, { count: number; date: string }>();
+  const PRD_DAILY_LIMIT = 5;
+
+  function getPrdRateLimit(ip: string): { count: number; allowed: boolean } {
+    const today = new Date().toDateString();
+    const data = prdRateLimits.get(ip);
+    
+    if (!data || data.date !== today) {
+      prdRateLimits.set(ip, { count: 0, date: today });
+      return { count: 0, allowed: true };
+    }
+    
+    return { count: data.count, allowed: data.count < PRD_DAILY_LIMIT };
+  }
+
+  function incrementPrdCount(ip: string) {
+    const today = new Date().toDateString();
+    const data = prdRateLimits.get(ip);
+    
+    if (!data || data.date !== today) {
+      prdRateLimits.set(ip, { count: 1, date: today });
+    } else {
+      prdRateLimits.set(ip, { count: data.count + 1, date: today });
+    }
+  }
+
+  app.post("/api/generate-prd", async (req, res) => {
+    try {
+      const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+      const { count, allowed } = getPrdRateLimit(clientIp);
+      
+      if (!allowed) {
+        return res.status(429).json({ 
+          error: `You've generated ${PRD_DAILY_LIMIT} PRDs today. Try again tomorrow!`,
+          remaining: 0
+        });
+      }
+
+      const { userInput, optionalRequirements } = req.body;
+      
+      if (!userInput || typeof userInput !== "string") {
+        return res.status(400).json({ error: "Please describe your app idea" });
+      }
+      
+      if (userInput.length < 100) {
+        return res.status(400).json({ error: "Please provide at least 100 characters describing your idea" });
+      }
+      
+      if (userInput.length > 2000) {
+        return res.status(400).json({ error: "Please keep your description under 2000 characters" });
+      }
+
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+      if (!anthropicApiKey) {
+        return res.status(500).json({ error: "AI service not configured" });
+      }
+
+      const optionalText = optionalRequirements && optionalRequirements.length > 0
+        ? `\n\nADDITIONAL REQUIREMENTS:\n${optionalRequirements.map((r: string) => `- ${r}`).join("\n")}`
+        : "";
+
+      const systemPrompt = `You are a product requirements document expert specializing in Replit projects for beginner developers.
+
+A student has described their app idea below. Create a comprehensive PRD that is optimized for Replit Agent to build successfully.
+
+Generate a PRD with these sections:
+1. PROJECT OVERVIEW
+2. PROBLEM & SOLUTION
+3. CORE FEATURES (Must Have)
+4. USER INTERFACE REQUIREMENTS
+5. TECHNICAL SPECIFICATIONS FOR REPLIT
+6. DATA MODEL
+7. API REQUIREMENTS
+8. USER STORIES
+9. SUCCESS CRITERIA
+10. OUT OF SCOPE (v1)
+11. REPLIT IMPLEMENTATION NOTES
+
+IMPORTANT GUIDELINES:
+- Write for a beginner developer
+- Be specific and detailed
+- Use clear, simple language
+- Make this immediately actionable in Replit
+- Keep scope reasonable for a first project (can be built in 2-8 hours)
+- Prioritize functionality over perfection
+- If the idea is too complex, simplify it to a viable v1
+- Format using Markdown with clear headers`;
+
+      const userMessage = `STUDENT'S IDEA:
+${userInput}${optionalText}
+
+Please generate a detailed, Replit-optimized PRD for this app idea.`;
+
+      const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+      
+      const response = await retryWithBackoff(() => 
+        anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4000,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }]
+        })
+      );
+
+      const textContent = response.content.find(c => c.type === "text");
+      const prd = textContent ? textContent.text : "";
+      
+      if (!prd) {
+        return res.status(500).json({ error: "Failed to generate PRD. Please try again." });
+      }
+
+      incrementPrdCount(clientIp);
+      
+      res.json({ 
+        prd,
+        remaining: PRD_DAILY_LIMIT - count - 1
+      });
+      
+    } catch (error: any) {
+      console.error("PRD Generation error:", error);
+      
+      if (error?.status === 529 || error?.message?.includes("overloaded")) {
+        return res.status(503).json({ error: "AI service is busy. Please try again in a few moments." });
+      }
+      
+      res.status(500).json({ error: "Failed to generate PRD. Please try again." });
+    }
+  });
+
   return httpServer;
 }
