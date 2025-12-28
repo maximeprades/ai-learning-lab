@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { usePrecisionRecall } from "@/lib/stores/usePrecisionRecall";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,10 +6,22 @@ import { cn } from "@/lib/utils";
 import { CheckCircle, XCircle, Trophy, ArrowLeft } from "lucide-react";
 
 export function ResultsScreen() {
-  const { roundResults, score, totalRounds, resetGame, inputMode } = usePrecisionRecall();
+  const { roundResults, score, totalRounds, resetGame, inputMode, email } = usePrecisionRecall();
+  const hasSubmittedRef = useRef(false);
 
   const maxScore = totalRounds * 20;
   const percentage = Math.round((score / maxScore) * 100);
+
+  useEffect(() => {
+    if (email && !hasSubmittedRef.current) {
+      hasSubmittedRef.current = true;
+      fetch("/api/pr/submit-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, score }),
+      }).catch(console.error);
+    }
+  }, [email, score]);
 
   const formatValue = (value: number) => {
     if (inputMode === "percentage") {

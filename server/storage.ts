@@ -7,6 +7,7 @@ import {
   appSettings,
   promptTemplates,
   scenarios,
+  precisionRecallStudents,
   type User, 
   type InsertUser,
   type Student,
@@ -14,7 +15,8 @@ import {
   type PromptVersion,
   type InsertPromptVersion,
   type PromptTemplate,
-  type Scenario
+  type Scenario,
+  type PrecisionRecallStudent
 } from "@shared/schema";
 
 const MAX_PROMPTS_PER_USER = 50;
@@ -207,6 +209,53 @@ export class DatabaseStorage implements IStorage {
         .set({ sortOrder: i + 1 })
         .where(eq(scenarios.id, orderedIds[i]));
     }
+  }
+
+  async getOrCreatePRStudent(email: string): Promise<PrecisionRecallStudent> {
+    const [existing] = await db.select()
+      .from(precisionRecallStudents)
+      .where(eq(precisionRecallStudents.email, email));
+    
+    if (existing) {
+      const [updated] = await db.update(precisionRecallStudents)
+        .set({ lastActive: new Date() })
+        .where(eq(precisionRecallStudents.email, email))
+        .returning();
+      return updated;
+    }
+    
+    const [student] = await db.insert(precisionRecallStudents)
+      .values({ email })
+      .returning();
+    return student;
+  }
+
+  async getAllPRStudents(): Promise<PrecisionRecallStudent[]> {
+    return await db.select()
+      .from(precisionRecallStudents)
+      .orderBy(desc(precisionRecallStudents.highestScore));
+  }
+
+  async updatePRStudentScore(email: string, score: number): Promise<void> {
+    const [student] = await db.select()
+      .from(precisionRecallStudents)
+      .where(eq(precisionRecallStudents.email, email));
+    
+    if (student) {
+      const newHighest = Math.max(student.highestScore || 0, score);
+      await db.update(precisionRecallStudents)
+        .set({ 
+          highestScore: newHighest,
+          gamesPlayed: sql`COALESCE(${precisionRecallStudents.gamesPlayed}, 0) + 1`,
+          lastActive: new Date()
+        })
+        .where(eq(precisionRecallStudents.email, email));
+    }
+  }
+
+  async deletePRStudent(id: number): Promise<void> {
+    await db.delete(precisionRecallStudents)
+      .where(eq(precisionRecallStudents.id, id));
   }
 }
 

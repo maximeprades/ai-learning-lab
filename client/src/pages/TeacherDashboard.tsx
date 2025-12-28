@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft } from "lucide-react";
+import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft, Target } from "lucide-react";
 
 interface Student {
   id: number;
@@ -13,6 +13,14 @@ interface Student {
   isRunningTest: boolean | null;
   highestScore: number | null;
   promptCount: number | null;
+  lastActive: string | null;
+}
+
+interface PRStudent {
+  id: number;
+  email: string;
+  highestScore: number | null;
+  gamesPlayed: number | null;
   lastActive: string | null;
 }
 
@@ -43,6 +51,7 @@ export default function TeacherDashboard() {
   
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
+  const [prStudents, setPRStudents] = useState<PRStudent[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [promptTemplate, setPromptTemplate] = useState("");
   const [defaultTemplate, setDefaultTemplate] = useState("");
@@ -55,7 +64,7 @@ export default function TeacherDashboard() {
   const [scenarioImage, setScenarioImage] = useState<File | null>(null);
   const [scenarioSaving, setScenarioSaving] = useState(false);
   
-  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string } | null>(null);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string; type: "prompt101" | "pr" } | null>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,6 +133,8 @@ export default function TeacherDashboard() {
           const data = JSON.parse(event.data);
           if (data.type === "students_update") {
             setStudents(data.students);
+          } else if (data.type === "pr_students_update") {
+            setPRStudents(data.prStudents);
           }
         } catch (e) {
           console.error("WebSocket message error:", e);
@@ -180,9 +191,12 @@ export default function TeacherDashboard() {
     setPromptTemplate(defaultTemplate);
   };
 
-  const handleDeleteStudent = async (id: number) => {
+  const handleDeleteStudent = async (id: number, type: "prompt101" | "pr") => {
     try {
-      const response = await fetch(`/api/teacher/students/${id}`, {
+      const endpoint = type === "pr" 
+        ? `/api/teacher/pr-students/${id}` 
+        : `/api/teacher/students/${id}`;
+      const response = await fetch(endpoint, {
         method: "DELETE",
       });
       
@@ -534,7 +548,76 @@ export default function TeacherDashboard() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => setDeleteConfirmDialog({ id: student.id, email: student.email })}
+                            onClick={() => setDeleteConfirmDialog({ id: student.id, email: student.email, type: "prompt101" })}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-indigo-200 bg-indigo-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-indigo-800">
+              <Target className="w-5 h-5" />
+              Precision & Recall Leaderboard ({prStudents.length} students)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {prStudents.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No students have played the Precision & Recall game yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-indigo-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-800">Rank</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-800">Email</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-indigo-800">Games Played</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-indigo-800">Best Score</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-indigo-800">Last Active</th>
+                      <th className="px-2 py-3 w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-indigo-200">
+                    {prStudents.map((student, index) => (
+                      <tr key={student.id}>
+                        <td className="px-4 py-3 text-sm">
+                          <span className="flex items-center gap-2">
+                            {index === 0 && <Trophy className="w-4 h-4 text-yellow-500" />}
+                            {index === 1 && <Trophy className="w-4 h-4 text-gray-400" />}
+                            {index === 2 && <Trophy className="w-4 h-4 text-amber-600" />}
+                            <span className="font-medium">#{index + 1}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
+                        <td className="px-4 py-3 text-center text-sm">{student.gamesPlayed || 0}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`font-bold text-lg ${
+                            (student.highestScore || 0) >= 90 ? "text-green-600" :
+                            (student.highestScore || 0) >= 60 ? "text-yellow-600" : "text-red-600"
+                          }`}>
+                            {student.highestScore ?? 0}/100
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-gray-500">
+                          <span className="flex items-center justify-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatTime(student.lastActive)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => setDeleteConfirmDialog({ id: student.id, email: student.email, type: "pr" })}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -561,7 +644,7 @@ export default function TeacherDashboard() {
             <Button variant="outline" onClick={() => setDeleteConfirmDialog(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={() => deleteConfirmDialog && handleDeleteStudent(deleteConfirmDialog.id)}>
+            <Button variant="destructive" onClick={() => deleteConfirmDialog && handleDeleteStudent(deleteConfirmDialog.id, deleteConfirmDialog.type)}>
               Delete
             </Button>
           </div>

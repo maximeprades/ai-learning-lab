@@ -154,6 +154,11 @@ async function broadcastStudentUpdate() {
   broadcastToTeachers({ type: "students_update", students });
 }
 
+async function broadcastPRStudentUpdate() {
+  const prStudents = await storage.getAllPRStudents();
+  broadcastToTeachers({ type: "pr_students_update", prStudents });
+}
+
 async function initializeDefaults() {
   const template = await storage.getPromptTemplate();
   if (!template) {
@@ -206,6 +211,8 @@ export async function registerRoutes(
           teacherClients.add(ws);
           const students = await storage.getAllStudents();
           ws.send(JSON.stringify({ type: "students_update", students }));
+          const prStudents = await storage.getAllPRStudents();
+          ws.send(JSON.stringify({ type: "pr_students_update", prStudents }));
         }
       } catch (e) {
         console.error("WebSocket message error:", e);
@@ -259,6 +266,77 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get leaderboard error:", error);
       res.status(500).json({ error: "Failed to get leaderboard" });
+    }
+  });
+
+  app.post("/api/pr/login", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      const student = await storage.getOrCreatePRStudent(email.toLowerCase().trim());
+      await broadcastPRStudentUpdate();
+      res.json({ student });
+    } catch (error) {
+      console.error("PR student login error:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  app.post("/api/pr/submit-score", async (req, res) => {
+    try {
+      const { email, score } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      if (typeof score !== "number") {
+        return res.status(400).json({ error: "Score is required" });
+      }
+      
+      await storage.updatePRStudentScore(email.toLowerCase().trim(), score);
+      await broadcastPRStudentUpdate();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("PR submit score error:", error);
+      res.status(500).json({ error: "Failed to submit score" });
+    }
+  });
+
+  app.get("/api/pr/leaderboard", async (_req, res) => {
+    try {
+      const students = await storage.getAllPRStudents();
+      res.json(students);
+    } catch (error) {
+      console.error("Get PR leaderboard error:", error);
+      res.status(500).json({ error: "Failed to get leaderboard" });
+    }
+  });
+
+  app.get("/api/teacher/pr-students", async (_req, res) => {
+    try {
+      const students = await storage.getAllPRStudents();
+      res.json(students);
+    } catch (error) {
+      console.error("Get PR students error:", error);
+      res.status(500).json({ error: "Failed to get students" });
+    }
+  });
+
+  app.delete("/api/teacher/pr-students/:id", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+      
+      await storage.deletePRStudent(studentId);
+      await broadcastPRStudentUpdate();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete PR student error:", error);
+      res.status(500).json({ error: "Failed to delete student" });
     }
   });
 

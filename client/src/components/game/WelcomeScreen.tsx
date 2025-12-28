@@ -1,10 +1,46 @@
+import { useState } from "react";
 import { usePrecisionRecall } from "@/lib/stores/usePrecisionRecall";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 export function WelcomeScreen() {
-  const { startGame } = usePrecisionRecall();
+  const { startGame, setEmail } = usePrecisionRecall();
+  const [emailInput, setEmailInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim());
+
+  const handleStart = async () => {
+    if (!isValidEmail) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/pr/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailInput.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to login");
+      }
+
+      setEmail(emailInput.trim().toLowerCase());
+      startGame();
+    } catch (err) {
+      setError("Failed to start game. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -64,14 +100,44 @@ export function WelcomeScreen() {
             </div>
           </div>
           
-          <div className="text-center">
-            <Button 
-              size="lg" 
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 text-lg"
-              onClick={startGame}
-            >
-              Start Game
-            </Button>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Enter your email to start:</label>
+              <Input
+                type="email"
+                placeholder="your.email@school.edu"
+                value={emailInput}
+                onChange={(e) => {
+                  setEmailInput(e.target.value);
+                  setError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && isValidEmail) {
+                    handleStart();
+                  }
+                }}
+                className="text-center"
+              />
+              {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+            </div>
+            
+            <div className="text-center">
+              <Button 
+                size="lg" 
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 text-lg"
+                onClick={handleStart}
+                disabled={!isValidEmail || isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  "Start Game"
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

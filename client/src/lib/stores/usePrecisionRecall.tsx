@@ -31,6 +31,7 @@ interface PrecisionRecallState {
   roundResults: RoundResult[];
   score: number;
   inputMode: "percentage" | "fraction";
+  email: string;
   
   startGame: () => void;
   generateNewRound: () => void;
@@ -38,6 +39,7 @@ interface PrecisionRecallState {
   nextRound: () => void;
   resetGame: () => void;
   setInputMode: (mode: "percentage" | "fraction") => void;
+  setEmail: (email: string) => void;
   
   getConfusionMatrix: () => { tp: number; fp: number; fn: number; tn: number };
   calculatePrecision: () => number;
@@ -117,6 +119,7 @@ export const usePrecisionRecall = create<PrecisionRecallState>((set, get) => ({
   roundResults: [],
   score: 0,
   inputMode: "percentage",
+  email: "",
   
   startGame: () => {
     const animals = generateAnimals();
@@ -225,10 +228,15 @@ export const usePrecisionRecall = create<PrecisionRecallState>((set, get) => ({
       animals: [],
       roundResults: [],
       score: 0,
+      email: "",
     });
   },
   
   setInputMode: (mode) => {
     set({ inputMode: mode });
+  },
+  
+  setEmail: (email) => {
+    set({ email });
   },
 }));
