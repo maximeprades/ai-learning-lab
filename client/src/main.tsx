@@ -10,11 +10,11 @@ function RootApp() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/safety-lab" component={SafetyLab} />
-      <Route path="/precision-recall">
-        <div className="min-h-screen bg-gradient-to-br from-emerald-900 to-teal-900 flex items-center justify-center p-8">
+      <Route path="/prd-generator">
+        <div className="min-h-screen bg-gradient-to-br from-amber-900 to-orange-900 flex items-center justify-center p-8">
           <div className="text-center text-white">
-            <h1 className="text-4xl font-bold mb-4">Precision and Recall Game</h1>
-            <p className="text-xl text-emerald-200">Coming Soon!</p>
+            <h1 className="text-4xl font-bold mb-4">PRD Generator</h1>
+            <p className="text-xl text-orange-200">Coming Soon!</p>
             <a href="/" className="mt-8 inline-block px-6 py-3 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
               ← Back to Home
             </a>
