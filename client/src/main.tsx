@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Route, Switch } from "wouter";
 import HomePage from "./pages/HomePage";
 import SafetyLab from "./App";
+import TeacherDashboard from "./pages/TeacherDashboard";
 import "./index.css";
 
 function RootApp() {
@@ -10,6 +11,7 @@ function RootApp() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/safety-lab" component={SafetyLab} />
+      <Route path="/teacher" component={TeacherDashboard} />
       <Route path="/prd-generator">
         <div className="min-h-screen bg-gradient-to-br from-amber-900 to-orange-900 flex items-center justify-center p-8">
           <div className="text-center text-white">

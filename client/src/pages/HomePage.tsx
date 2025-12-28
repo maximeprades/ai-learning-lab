@@ -1,4 +1,4 @@
-import { PawPrint, Target, FileText } from "lucide-react";
+import { PawPrint, Target, FileText, Shield } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -13,7 +13,7 @@ export default function HomePage() {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
           <a href="https://precision-recall.replit.app" target="_blank" rel="noopener noreferrer">
             <button className="group relative w-full h-64 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-emerald-500/30 hover:shadow-[0_20px_60px_-15px] focus:outline-none focus:ring-4 focus:ring-emerald-400/50">
               <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -56,6 +56,15 @@ export default function HomePage() {
                 </h2>
               </div>
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+            </button>
+          </a>
+        </div>
+
+        <div className="flex justify-center">
+          <a href="/teacher">
+            <button className="group flex items-center gap-3 px-6 py-3 bg-white/10 border border-white/30 rounded-xl text-white hover:bg-white/20 transition-all duration-300">
+              <Shield className="w-5 h-5" />
+              <span className="font-medium">Teacher Dashboard</span>
             </button>
           </a>
         </div>

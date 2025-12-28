@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Lock, Unlock, Mail, History, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Upload, Save, RefreshCw, Stethoscope } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Mail, History, Trophy, RefreshCw, Stethoscope } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -34,15 +34,6 @@ interface PromptVersion {
   score?: number | null;
 }
 
-interface Student {
-  id: number;
-  email: string;
-  isRunningTest: boolean | null;
-  highestScore: number | null;
-  promptCount: number | null;
-  lastActive: string | null;
-}
-
 interface Scenario {
   id: number;
   text: string;
@@ -60,107 +51,6 @@ function setStoredEmail(email: string): void {
   localStorage.setItem(STORAGE_KEY_EMAIL, email);
 }
 
-function TeacherDashboard({ students, onDeleteStudent }: { 
-  students: Student[]; 
-  onDeleteStudent: (id: number, email: string) => void;
-}) {
-  const formatTime = (dateString: string | null) => {
-    if (!dateString) return "Never";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    
-    if (diff < 60000) return "Just now";
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return date.toLocaleDateString();
-  };
-
-  return (
-    <Card className="border-2 border-green-200 bg-green-50">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-green-800">
-          <Users className="w-5 h-5" />
-          Student Dashboard ({students.length} students)
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {students.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">No students have logged in yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-green-100">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-green-800">Rank</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-green-800">Email</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Prompts</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Best Score</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Status</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Last Active</th>
-                  <th className="px-2 py-3 w-10"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-green-200">
-                {students.map((student, index) => (
-                  <tr key={student.id} className={student.isRunningTest ? "bg-yellow-50" : ""}>
-                    <td className="px-4 py-3 text-sm">
-                      <span className="flex items-center gap-2">
-                        {index === 0 && <Trophy className="w-4 h-4 text-yellow-500" />}
-                        {index === 1 && <Trophy className="w-4 h-4 text-gray-400" />}
-                        {index === 2 && <Trophy className="w-4 h-4 text-amber-600" />}
-                        <span className="font-medium">#{index + 1}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
-                    <td className="px-4 py-3 text-center text-sm">{student.promptCount || 0}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`font-bold text-lg ${
-                        (student.highestScore || 0) === 10 ? "text-green-600" :
-                        (student.highestScore || 0) >= 7 ? "text-yellow-600" : "text-red-600"
-                      }`}>
-                        {student.highestScore ?? 0}/10
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {student.isRunningTest ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Testing...
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                          Idle
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-500">
-                      <span className="flex items-center justify-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatTime(student.lastActive)}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => onDeleteStudent(student.id, student.email)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 function App() {
   const [email, setEmail] = useState<string | null>(null);
   const [emailInput, setEmailInput] = useState("");
@@ -173,29 +63,12 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<{ id: number; image: string; text: string } | null>(null);
-  const [isTeacherMode, setIsTeacherMode] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
 
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>("draft");
-  const [students, setStudents] = useState<Student[]>([]);
-  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string } | null>(null);
-  const [isAppLocked, setIsAppLocked] = useState(false);
   const [bypassMobile, setBypassMobile] = useState(false);
   
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [promptTemplate, setPromptTemplate] = useState("");
-  const [defaultTemplate, setDefaultTemplate] = useState("");
-  const [templateSaving, setTemplateSaving] = useState(false);
-  const [templateError, setTemplateError] = useState("");
-  
-  const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
-  const [newScenarioDialog, setNewScenarioDialog] = useState(false);
-  const [scenarioForm, setScenarioForm] = useState({ text: "", expected: "Allowed" });
-  const [scenarioImage, setScenarioImage] = useState<File | null>(null);
-  const [scenarioSaving, setScenarioSaving] = useState(false);
   
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<{ email: string; score: number | null; promptCount: number; hasAttempted: boolean }[]>([]);
@@ -206,8 +79,6 @@ function App() {
   const [showPromptDoctorModal, setShowPromptDoctorModal] = useState(false);
   const [promptDoctorLoading, setPromptDoctorLoading] = useState(false);
   
-  const wsRef = useRef<WebSocket | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/scenarios")
@@ -221,161 +92,6 @@ function App() {
       .catch(console.error);
   }, []);
 
-  useEffect(() => {
-    if (isTeacherMode) {
-      fetch("/api/app-lock")
-        .then(res => res.json())
-        .then(data => setIsAppLocked(data.isLocked))
-        .catch(console.error);
-      
-      fetch("/api/teacher/prompt-template")
-        .then(res => res.json())
-        .then(data => {
-          setPromptTemplate(data.template);
-          setDefaultTemplate(data.defaultTemplate);
-        })
-        .catch(console.error);
-      
-      fetch("/api/teacher/scenarios")
-        .then(res => res.json())
-        .then(data => setScenarios(data.map((s: any) => ({
-          id: s.id,
-          text: s.text,
-          expected: s.expected,
-          image: `/scenarios/${s.image}`
-        }))))
-        .catch(console.error);
-    }
-  }, [isTeacherMode]);
-
-  const toggleAppLock = async () => {
-    try {
-      const newLockState = !isAppLocked;
-      const response = await fetch("/api/teacher/toggle-lock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locked: newLockState }),
-      });
-      if (response.ok) {
-        setIsAppLocked(newLockState);
-      }
-    } catch (error) {
-      console.error("Failed to toggle lock:", error);
-    }
-  };
-
-  const savePromptTemplate = async () => {
-    if (!promptTemplate.includes("{{STUDENT_PROMPT}}")) {
-      setTemplateError("Template must include {{STUDENT_PROMPT}} placeholder");
-      return;
-    }
-    setTemplateSaving(true);
-    setTemplateError("");
-    try {
-      const response = await fetch("/api/teacher/prompt-template", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template: promptTemplate }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        setTemplateError(data.error || "Failed to save template");
-      }
-    } catch (error) {
-      setTemplateError("Failed to save template");
-    } finally {
-      setTemplateSaving(false);
-    }
-  };
-
-  const resetPromptTemplate = () => {
-    setPromptTemplate(defaultTemplate);
-  };
-
-  const refreshScenarios = async () => {
-    try {
-      const response = await fetch("/api/teacher/scenarios");
-      const data = await response.json();
-      setScenarios(data.map((s: any) => ({
-        id: s.id,
-        text: s.text,
-        expected: s.expected,
-        image: `/scenarios/${s.image}`
-      })));
-    } catch (error) {
-      console.error("Failed to refresh scenarios:", error);
-    }
-  };
-
-  const handleAddScenario = async () => {
-    if (!scenarioForm.text || !scenarioImage) return;
-    setScenarioSaving(true);
-    try {
-      const formData = new FormData();
-      formData.append("text", scenarioForm.text);
-      formData.append("expected", scenarioForm.expected);
-      formData.append("image", scenarioImage);
-      
-      const response = await fetch("/api/teacher/scenarios", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (response.ok) {
-        await refreshScenarios();
-        setNewScenarioDialog(false);
-        setScenarioForm({ text: "", expected: "Allowed" });
-        setScenarioImage(null);
-      }
-    } catch (error) {
-      console.error("Failed to add scenario:", error);
-    } finally {
-      setScenarioSaving(false);
-    }
-  };
-
-  const handleUpdateScenario = async () => {
-    if (!editingScenario) return;
-    setScenarioSaving(true);
-    try {
-      const formData = new FormData();
-      formData.append("text", scenarioForm.text);
-      formData.append("expected", scenarioForm.expected);
-      if (scenarioImage) {
-        formData.append("image", scenarioImage);
-      }
-      
-      const response = await fetch(`/api/teacher/scenarios/${editingScenario.id}`, {
-        method: "PUT",
-        body: formData,
-      });
-      
-      if (response.ok) {
-        await refreshScenarios();
-        setEditingScenario(null);
-        setScenarioForm({ text: "", expected: "Allowed" });
-        setScenarioImage(null);
-      }
-    } catch (error) {
-      console.error("Failed to update scenario:", error);
-    } finally {
-      setScenarioSaving(false);
-    }
-  };
-
-  const handleDeleteScenario = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this scenario?")) return;
-    try {
-      const response = await fetch(`/api/teacher/scenarios/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        await refreshScenarios();
-      }
-    } catch (error) {
-      console.error("Failed to delete scenario:", error);
-    }
-  };
 
   const fetchLeaderboard = async () => {
     setLeaderboardLoading(true);
@@ -403,35 +119,6 @@ function App() {
       setShowEmailDialog(true);
     }
   }, []);
-
-  useEffect(() => {
-    if (isTeacherMode) {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-      
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ type: "teacher_subscribe" }));
-      };
-      
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === "students_update") {
-            setStudents(data.students);
-          }
-        } catch (e) {
-          console.error("WebSocket message error:", e);
-        }
-      };
-      
-      wsRef.current = ws;
-      
-      return () => {
-        ws.close();
-        wsRef.current = null;
-      };
-    }
-  }, [isTeacherMode]);
 
   const loginStudent = async (studentEmail: string) => {
     try {
@@ -480,49 +167,6 @@ function App() {
     setResults(null);
     setEmailInput("");
     setShowEmailDialog(true);
-  };
-
-  const verifyTeacherPassword = async () => {
-    try {
-      const response = await fetch("/api/verify-teacher", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-
-      if (response.ok) {
-        setIsTeacherMode(true);
-        setShowPasswordDialog(false);
-        setPassword("");
-        setPasswordError("");
-      } else {
-        setPasswordError("Incorrect password");
-      }
-    } catch {
-      setPasswordError("Failed to verify password");
-    }
-  };
-
-  const toggleTeacherMode = () => {
-    if (isTeacherMode) {
-      setIsTeacherMode(false);
-    } else {
-      setShowPasswordDialog(true);
-    }
-  };
-
-  const handleDeleteStudent = async (id: number) => {
-    try {
-      const response = await fetch(`/api/teacher/students/${id}`, {
-        method: "DELETE",
-      });
-      
-      if (response.ok) {
-        setDeleteConfirmDialog(null);
-      }
-    } catch (error) {
-      console.error("Failed to delete student:", error);
-    }
   };
 
   const handleVersionSelect = (versionId: string) => {
@@ -699,7 +343,7 @@ function App() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            {email && !isTeacherMode && (
+            {email && (
               <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full text-sm">
                 <Mail className="w-4 h-4" />
                 <span className="hidden sm:inline">{email}</span>
@@ -719,161 +363,11 @@ function App() {
               <Trophy className="w-4 h-4" />
               <span className="hidden sm:inline">Leaderboard</span>
             </Button>
-            <Button
-              variant="outline"
-              onClick={toggleTeacherMode}
-              className={`flex items-center gap-2 ${isTeacherMode ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' : 'bg-white/20 text-white border-white/40 hover:bg-white/30'}`}
-            >
-              {isTeacherMode ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-              {isTeacherMode ? "Student Mode" : "Teacher Mode"}
-            </Button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {isTeacherMode && (
-          <div className="space-y-4">
-            <Card className="border-2 border-indigo-200 bg-indigo-50">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-indigo-700" />
-                    <span className="font-medium text-indigo-800">API Access Control</span>
-                  </div>
-                  <Button
-                    onClick={toggleAppLock}
-                    variant={isAppLocked ? "destructive" : "outline"}
-                    className={isAppLocked ? "bg-red-600 hover:bg-red-700" : "border-green-600 text-green-600 hover:bg-green-50"}
-                  >
-                    {isAppLocked ? (
-                      <>
-                        <Lock className="w-4 h-4 mr-2" />
-                        API Locked
-                      </>
-                    ) : (
-                      <>
-                        <Unlock className="w-4 h-4 mr-2" />
-                        API Unlocked
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <p className="text-sm text-indigo-600 mt-2">
-                  {isAppLocked 
-                    ? "Students cannot run tests using the AI API. Only 'test' mode works." 
-                    : "Students can run tests using the AI API."}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-2 border-amber-200 bg-amber-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-amber-800">
-                  <Edit3 className="w-5 h-5" />
-                  AI Prompt Template
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-amber-700">
-                  Edit the prompt sent to the AI. Use <code className="bg-amber-200 px-1 rounded">{"{{STUDENT_PROMPT}}"}</code> where student instructions should be inserted.
-                </p>
-                <Textarea
-                  value={promptTemplate}
-                  onChange={(e) => setPromptTemplate(e.target.value)}
-                  className="min-h-[150px] font-mono text-sm"
-                  placeholder="Enter prompt template..."
-                />
-                {templateError && (
-                  <p className="text-red-600 text-sm">{templateError}</p>
-                )}
-                <div className="flex gap-2">
-                  <Button onClick={savePromptTemplate} disabled={templateSaving}>
-                    {templateSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Template
-                  </Button>
-                  <Button variant="outline" onClick={resetPromptTemplate}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reset to Default
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-orange-200 bg-orange-50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-orange-800">
-                    <ImageIcon className="w-5 h-5" />
-                    Test Scenarios ({scenarios.length})
-                  </CardTitle>
-                  <Button onClick={() => {
-                    setScenarioForm({ text: "", expected: "Allowed" });
-                    setScenarioImage(null);
-                    setNewScenarioDialog(true);
-                  }} size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Scenario
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                  {scenarios.map((scenario) => (
-                    <div key={scenario.id} className="relative group">
-                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
-                        <img
-                          src={scenario.image}
-                          alt={scenario.text}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                        #{scenario.id}
-                      </div>
-                      <div className={`absolute top-1 right-1 text-xs px-2 py-0.5 rounded-full font-bold ${
-                        scenario.expected === "Allowed" ? "bg-green-500 text-white" :
-                        scenario.expected === "Prohibited" ? "bg-red-500 text-white" :
-                        "bg-yellow-500 text-black"
-                      }`}>
-                        {scenario.expected === "Allowed" ? "✅" : scenario.expected === "Prohibited" ? "🚫" : "⚠️"}
-                      </div>
-                      <p className="mt-1 text-xs text-gray-600 line-clamp-2 leading-tight">{scenario.text}</p>
-                      <div className="flex gap-1 mt-1">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => {
-                            setEditingScenario(scenario);
-                            setScenarioForm({ text: scenario.text, expected: scenario.expected });
-                            setScenarioImage(null);
-                          }}
-                        >
-                          <Edit3 className="w-3 h-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-7 text-xs text-red-600 border-red-300 hover:bg-red-50"
-                          onClick={() => handleDeleteScenario(scenario.id)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <TeacherDashboard 
-              students={students} 
-              onDeleteStudent={(id, email) => setDeleteConfirmDialog({ id, email })}
-            />
-          </div>
-        )}
-
         <Card className="border-2 border-purple-200 bg-purple-50">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-purple-800">
@@ -892,16 +386,13 @@ function App() {
                   <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:shadow-lg hover:border-purple-400 transition-all">
                     <img
                       src={scenario.image}
-                      alt={isTeacherMode ? scenario.text : `Scenario ${scenario.id}`}
+                      alt={`Scenario ${scenario.id}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   </div>
                   <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                     #{scenario.id}
                   </div>
-                  {isTeacherMode && (
-                    <p className="mt-1 text-xs text-gray-600 line-clamp-2 leading-tight">{scenario.text}</p>
-                  )}
                 </div>
               ))}
             </div>
@@ -1170,10 +661,9 @@ function App() {
               />
               <div className="p-4 bg-white">
                 <p className="text-base font-medium text-gray-800">
-                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold mr-3">
+                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
                     #{modalImage.id}
                   </span>
-                  {isTeacherMode && modalImage.text}
                 </p>
               </div>
             </div>
@@ -1253,192 +743,6 @@ function App() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={newScenarioDialog} onOpenChange={setNewScenarioDialog}>
-        <DialogContent className="max-w-md">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Add New Scenario
-          </DialogTitle>
-          <div className="space-y-4 pt-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Description</label>
-              <Textarea
-                placeholder="Describe what the image shows..."
-                value={scenarioForm.text}
-                onChange={(e) => setScenarioForm(prev => ({ ...prev, text: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Expected Label</label>
-              <Select value={scenarioForm.expected} onValueChange={(v) => setScenarioForm(prev => ({ ...prev, expected: v }))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Allowed">✅ Allowed</SelectItem>
-                  <SelectItem value="Prohibited">🚫 Prohibited</SelectItem>
-                  <SelectItem value="Disturbing">⚠️ Disturbing</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Image</label>
-              <div className="mt-1">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={(e) => setScenarioImage(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-              </div>
-              {scenarioImage && (
-                <p className="text-xs text-green-600 mt-1">Selected: {scenarioImage.name}</p>
-              )}
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setNewScenarioDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddScenario} disabled={scenarioSaving || !scenarioForm.text || !scenarioImage}>
-                {scenarioSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                Add Scenario
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={editingScenario !== null} onOpenChange={() => setEditingScenario(null)}>
-        <DialogContent className="max-w-md">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-            <Edit3 className="w-5 h-5" />
-            Edit Scenario
-          </DialogTitle>
-          <div className="space-y-4 pt-4">
-            {editingScenario && (
-              <div className="w-32 h-32 mx-auto rounded-lg overflow-hidden border-2 border-gray-200">
-                <img
-                  src={editingScenario.image}
-                  alt={editingScenario.text}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-            <div>
-              <label className="text-sm font-medium text-gray-700">Description</label>
-              <Textarea
-                placeholder="Describe what the image shows..."
-                value={scenarioForm.text}
-                onChange={(e) => setScenarioForm(prev => ({ ...prev, text: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Expected Label</label>
-              <Select value={scenarioForm.expected} onValueChange={(v) => setScenarioForm(prev => ({ ...prev, expected: v }))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Allowed">✅ Allowed</SelectItem>
-                  <SelectItem value="Prohibited">🚫 Prohibited</SelectItem>
-                  <SelectItem value="Disturbing">⚠️ Disturbing</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Replace Image (optional)</label>
-              <div className="mt-1">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={(e) => setScenarioImage(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-              </div>
-              {scenarioImage && (
-                <p className="text-xs text-green-600 mt-1">New image: {scenarioImage.name}</p>
-              )}
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setEditingScenario(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateScenario} disabled={scenarioSaving || !scenarioForm.text}>
-                {scenarioSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            Enter Teacher Password
-          </DialogTitle>
-          <div className="space-y-4 pt-4">
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setPasswordError("");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  verifyTeacherPassword();
-                }
-              }}
-            />
-            {passwordError && (
-              <p className="text-red-600 text-sm">{passwordError}</p>
-            )}
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => {
-                setShowPasswordDialog(false);
-                setPassword("");
-                setPasswordError("");
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={verifyTeacherPassword}>
-                Unlock
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={deleteConfirmDialog !== null} onOpenChange={() => setDeleteConfirmDialog(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-red-600">
-            <Trash2 className="w-5 h-5" />
-            Delete User
-          </DialogTitle>
-          <div className="space-y-4 pt-4">
-            <p className="text-sm text-gray-600">
-              Are you sure you want to delete <strong>{deleteConfirmDialog?.email}</strong>? This will permanently remove all their prompts and data.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDeleteConfirmDialog(null)}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => deleteConfirmDialog && handleDeleteStudent(deleteConfirmDialog.id)}
-              >
-                Delete User
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={showEmailDialog} onOpenChange={() => {}}>
         <DialogContent className="max-w-sm" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogTitle className="text-lg font-semibold flex items-center gap-2">
@@ -1468,25 +772,6 @@ function App() {
             )}
             <Button onClick={handleEmailSubmit} className="w-full">
               Get Started
-            </Button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Or</span>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowEmailDialog(false);
-                setShowPasswordDialog(true);
-              }}
-              className="w-full"
-            >
-              <Lock className="w-4 h-4 mr-2" />
-              Enter as Teacher
             </Button>
           </div>
         </DialogContent>
