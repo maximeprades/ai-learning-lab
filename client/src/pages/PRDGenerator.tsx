@@ -17,7 +17,9 @@ import {
   CheckCircle2,
   Sparkles,
   Zap,
-  Rocket
+  Rocket,
+  Pencil,
+  Eye
 } from "lucide-react";
 
 const MIN_CHARS = 100;
@@ -56,6 +58,8 @@ export default function PRDGenerator() {
     { id: "darkmode", label: "Dark mode", checked: false },
   ]);
   const [generatedPRD, setGeneratedPRD] = useState("");
+  const [editedPrd, setEditedPrd] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [generationCount, setGenerationCount] = useState(0);
@@ -146,6 +150,8 @@ export default function PRDGenerator() {
 
       const data = await response.json();
       setGeneratedPRD(data.prd);
+      setEditedPrd(data.prd);
+      setIsEditing(false);
       updateGenerationCount(generationCount + 1);
       setStep("result");
     } catch (err: any) {
@@ -161,7 +167,7 @@ export default function PRDGenerator() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(generatedPRD);
+      await navigator.clipboard.writeText(editedPrd);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     } catch {
@@ -170,7 +176,7 @@ export default function PRDGenerator() {
   };
 
   const handleDownload = () => {
-    const blob = new Blob([generatedPRD], { type: "text/markdown" });
+    const blob = new Blob([editedPrd], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -185,6 +191,8 @@ export default function PRDGenerator() {
     setStep("input");
     setIdea("");
     setGeneratedPRD("");
+    setEditedPrd("");
+    setIsEditing(false);
     setError("");
     setCopied(false);
     setOptionalReqs(optionalReqs.map(r => ({ ...r, checked: false })));
@@ -297,9 +305,44 @@ export default function PRDGenerator() {
 
           <Card>
             <CardContent className="p-6 md:p-8">
-              <div className="prose prose-gray max-w-none prose-headings:text-gray-800 prose-h1:text-2xl prose-h2:text-xl prose-h2:border-b prose-h2:pb-2 prose-h2:mb-4 prose-p:text-gray-700 prose-li:text-gray-700 prose-strong:text-gray-800">
-                <ReactMarkdown>{generatedPRD}</ReactMarkdown>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-2">
+                  <Button
+                    variant={isEditing ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                    className={!isEditing ? "bg-orange-500 hover:bg-orange-600" : ""}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                  <Button
+                    variant={isEditing ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    className={isEditing ? "bg-orange-500 hover:bg-orange-600" : ""}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+                {editedPrd !== generatedPRD && (
+                  <span className="text-sm text-amber-600">Edited</span>
+                )}
               </div>
+              
+              {isEditing ? (
+                <Textarea
+                  value={editedPrd}
+                  onChange={(e) => setEditedPrd(e.target.value)}
+                  className="min-h-[500px] font-mono text-sm"
+                  placeholder="Edit your PRD here..."
+                />
+              ) : (
+                <div className="prose prose-gray max-w-none prose-headings:text-gray-800 prose-h1:text-2xl prose-h2:text-xl prose-h2:border-b prose-h2:pb-2 prose-h2:mb-4 prose-p:text-gray-700 prose-li:text-gray-700 prose-strong:text-gray-800">
+                  <ReactMarkdown>{editedPrd}</ReactMarkdown>
+                </div>
+              )}
             </CardContent>
           </Card>
 
