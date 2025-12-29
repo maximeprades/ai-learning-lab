@@ -8,6 +8,7 @@ import {
   promptTemplates,
   scenarios,
   precisionRecallStudents,
+  demoPrds,
   type User, 
   type InsertUser,
   type Student,
@@ -16,7 +17,8 @@ import {
   type InsertPromptVersion,
   type PromptTemplate,
   type Scenario,
-  type PrecisionRecallStudent
+  type PrecisionRecallStudent,
+  type DemoPrd
 } from "@shared/schema";
 
 const MAX_PROMPTS_PER_USER = 50;
@@ -256,6 +258,25 @@ export class DatabaseStorage implements IStorage {
   async deletePRStudent(id: number): Promise<void> {
     await db.delete(precisionRecallStudents)
       .where(eq(precisionRecallStudents.id, id));
+  }
+
+  async getDemoPrd(key: string): Promise<string | null> {
+    const [prd] = await db.select()
+      .from(demoPrds)
+      .where(eq(demoPrds.key, key));
+    return prd?.content ?? null;
+  }
+
+  async setDemoPrd(key: string, content: string): Promise<void> {
+    const existing = await this.getDemoPrd(key);
+    if (existing) {
+      await db.update(demoPrds)
+        .set({ content })
+        .where(eq(demoPrds.key, key));
+    } else {
+      await db.insert(demoPrds)
+        .values({ key, content });
+    }
   }
 }
 

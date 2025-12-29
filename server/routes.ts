@@ -1001,6 +1001,87 @@ Respond in exactly this JSON format:
 
   app.post("/api/generate-prd", async (req, res) => {
     try {
+      const { userInput, optionalRequirements } = req.body;
+      
+      if (!userInput || typeof userInput !== "string") {
+        return res.status(400).json({ error: "Please describe your app idea" });
+      }
+
+      // Check for test mode - return demo PRD without using API quota
+      if (userInput.trim().toLowerCase() === "test") {
+        let demoPrd = await storage.getDemoPrd("personal-finance");
+        
+        if (!demoPrd) {
+          // Generate demo PRD once and store it
+          const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+          if (!anthropicApiKey) {
+            return res.status(500).json({ error: "AI service not configured" });
+          }
+
+          const demoIdea = `I want to build a personal finance tracker app that helps people manage their money better. The app should let users:
+- Add income and expenses with categories (groceries, rent, entertainment, etc.)
+- See their spending breakdown in charts and graphs
+- Set monthly budgets for different categories and get alerts when close to limit
+- View transaction history with search and filter
+- See a dashboard with current balance, recent transactions, and budget progress
+The app should be simple and clean, targeting young adults who want to start managing their money better.`;
+
+          const systemPrompt = `You are a product requirements document expert specializing in Replit projects for beginner developers.
+
+A student has described their app idea below. Create a comprehensive PRD that is optimized for Replit Agent to build successfully.
+
+Generate a PRD with these sections:
+1. PROJECT OVERVIEW
+2. PROBLEM & SOLUTION
+3. CORE FEATURES (Must Have)
+4. USER INTERFACE REQUIREMENTS
+5. TECHNICAL SPECIFICATIONS FOR REPLIT
+6. DATA MODEL
+7. API REQUIREMENTS
+8. USER STORIES
+9. SUCCESS CRITERIA
+10. OUT OF SCOPE (v1)
+11. REPLIT IMPLEMENTATION NOTES
+
+IMPORTANT GUIDELINES:
+- Write for a beginner developer
+- Be specific and detailed
+- Use clear, simple language
+- Make this immediately actionable in Replit
+- Keep scope reasonable for a first project (can be built in 2-8 hours)
+- Prioritize functionality over perfection
+- If the idea is too complex, simplify it to a viable v1
+- Format using Markdown with clear headers`;
+
+          const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+          const response = await retryWithBackoff(() => 
+            anthropic.messages.create({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 4000,
+              system: systemPrompt,
+              messages: [{ role: "user", content: `STUDENT'S IDEA:\n${demoIdea}\n\nPlease generate a detailed, Replit-optimized PRD for this app idea.` }]
+            })
+          );
+
+          const textContent = response.content.find(c => c.type === "text");
+          demoPrd = textContent ? textContent.text : "";
+          
+          if (demoPrd) {
+            await storage.setDemoPrd("personal-finance", demoPrd);
+          }
+        }
+
+        if (!demoPrd) {
+          return res.status(500).json({ error: "Failed to load demo PRD" });
+        }
+
+        return res.json({ 
+          prd: demoPrd,
+          remaining: 999, // Demo mode doesn't count against limit
+          isDemo: true
+        });
+      }
+
       const clientIp = req.ip || req.socket.remoteAddress || "unknown";
       const { count, allowed } = getPrdRateLimit(clientIp);
       
@@ -1009,12 +1090,6 @@ Respond in exactly this JSON format:
           error: `You've generated ${PRD_DAILY_LIMIT} PRDs today. Try again tomorrow!`,
           remaining: 0
         });
-      }
-
-      const { userInput, optionalRequirements } = req.body;
-      
-      if (!userInput || typeof userInput !== "string") {
-        return res.status(400).json({ error: "Please describe your app idea" });
       }
       
       if (userInput.length < 100) {
