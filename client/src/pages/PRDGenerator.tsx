@@ -48,8 +48,7 @@ interface OptionalRequirement {
 export default function PRDGenerator() {
   const [step, setStep] = useState<"input" | "loading" | "result">("input");
   const [idea, setIdea] = useState("");
-    const [showOptional, setShowOptional] = useState(false);
-  const [optionalReqs, setOptionalReqs] = useState<OptionalRequirement[]>([
+      const [optionalReqs, setOptionalReqs] = useState<OptionalRequirement[]>([
     { id: "auth", label: "User accounts needed", checked: false },
     { id: "mobile", label: "Mobile-first design", checked: false },
     { id: "realtime", label: "Real-time features", checked: false },
@@ -406,28 +405,23 @@ export default function PRDGenerator() {
               </div>
             </div>
 
-            <Collapsible open={showOptional} onOpenChange={setShowOptional}>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 mb-4">
-                {showOptional ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                Want to add more details? (Optional)
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {optionalReqs.map(req => (
-                    <div key={req.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={req.id}
-                        checked={req.checked}
-                        onCheckedChange={() => toggleOptionalReq(req.id)}
-                      />
-                      <label htmlFor={req.id} className="text-sm text-gray-700 cursor-pointer">
-                        {req.label}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-3">Want to add more details? (Optional)</p>
+              <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                {optionalReqs.map(req => (
+                  <div key={req.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={req.id}
+                      checked={req.checked}
+                      onCheckedChange={() => toggleOptionalReq(req.id)}
+                    />
+                    <label htmlFor={req.id} className="text-sm text-gray-700 cursor-pointer">
+                      {req.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-4">
