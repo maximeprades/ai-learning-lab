@@ -99,7 +99,8 @@ export default function PRDGenerator() {
   };
 
   const charCount = idea.length;
-  const isValidLength = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
+  const isTestMode = idea.trim().toLowerCase() === "test";
+  const isValidLength = isTestMode || (charCount >= MIN_CHARS && charCount <= MAX_CHARS);
   const isRateLimited = generationCount >= DAILY_LIMIT;
 
   const handleGenerate = async () => {
