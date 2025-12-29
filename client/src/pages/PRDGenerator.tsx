@@ -48,8 +48,7 @@ interface OptionalRequirement {
 export default function PRDGenerator() {
   const [step, setStep] = useState<"input" | "loading" | "result">("input");
   const [idea, setIdea] = useState("");
-  const [showExample, setShowExample] = useState(false);
-  const [showOptional, setShowOptional] = useState(false);
+    const [showOptional, setShowOptional] = useState(false);
   const [optionalReqs, setOptionalReqs] = useState<OptionalRequirement[]>([
     { id: "auth", label: "User accounts needed", checked: false },
     { id: "mobile", label: "Mobile-first design", checked: false },
@@ -395,29 +394,17 @@ export default function PRDGenerator() {
               </p>
             )}
 
-            <div className="flex items-center gap-2 mb-4">
-              <Checkbox
-                id="showExample"
-                checked={showExample}
-                onCheckedChange={(checked) => setShowExample(checked as boolean)}
-              />
-              <label htmlFor="showExample" className="text-sm text-gray-700 cursor-pointer">
-                Show me an example
-              </label>
-            </div>
-
-            {showExample && (
-              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
-                <div>
-                  <p className="text-red-600 font-medium text-sm mb-1">❌ Too vague:</p>
-                  <p className="text-gray-600 text-sm italic">"{EXAMPLE_BAD}"</p>
-                </div>
-                <div>
-                  <p className="text-green-600 font-medium text-sm mb-1">✅ Great detail:</p>
-                  <p className="text-gray-600 text-sm italic">"{EXAMPLE_GOOD}"</p>
-                </div>
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">Example:</p>
+              <div>
+                <p className="text-red-600 font-medium text-sm mb-1">❌ Too vague:</p>
+                <p className="text-gray-600 text-sm italic">"{EXAMPLE_BAD}"</p>
               </div>
-            )}
+              <div>
+                <p className="text-green-600 font-medium text-sm mb-1">✅ Great detail:</p>
+                <p className="text-gray-600 text-sm italic">"{EXAMPLE_GOOD}"</p>
+              </div>
+            </div>
 
             <Collapsible open={showOptional} onOpenChange={setShowOptional}>
               <CollapsibleTrigger className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 mb-4">
