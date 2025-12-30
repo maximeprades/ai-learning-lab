@@ -371,6 +371,38 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <Card className="border-2 border-purple-200 bg-purple-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-purple-800">
+              <ImageIcon className="w-5 h-5" />
+              The 10 Test Scenarios - Can you write rules to classify them all correctly?
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {scenarios.map((scenario) => (
+                <div
+                  key={scenario.id}
+                  className="relative group cursor-pointer"
+                  onClick={() => setModalImage({ id: scenario.id, image: scenario.image, text: scenario.text })}
+                >
+                  <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:shadow-lg hover:border-purple-400 transition-all">
+                    <img
+                      src={scenario.image}
+                      alt={`Scenario ${scenario.id}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  </div>
+                  <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                    #{scenario.id}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-purple-600 mt-3 text-center">Click on any image to enlarge it</p>
+          </CardContent>
+        </Card>
+
         <div className="grid md:grid-cols-3 gap-6">
           <Card className="md:col-span-1 bg-blue-50 border-blue-200">
             <CardHeader className="pb-3">
@@ -506,67 +538,52 @@ function App() {
           </Card>
         </div>
 
-        <Card className="border-2 border-indigo-200">
-          <CardHeader className="bg-indigo-50 border-b">
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5" />
-                Test Scenarios
-              </span>
-              {results && (
+        {results && (
+          <Card className="border-2 border-indigo-200">
+            <CardHeader className="bg-indigo-50 border-b">
+              <CardTitle className="flex items-center justify-between">
+                <span>Test Results</span>
                 <span className={`text-xl ${results.score === results.total ? 'text-green-600' : results.score >= 7 ? 'text-yellow-600' : 'text-red-600'}`}>
                   Score: {results.score}/{results.total} 
                   {results.score === results.total && " 🎉 Perfect!"}
                 </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 relative">
-            {isLoading && (
-              <div className="absolute inset-0 bg-gray-200/70 flex items-center justify-center z-10">
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-                  <p className="text-indigo-700 font-medium">Running test...</p>
-                </div>
-              </div>
-            )}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">#</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Image</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Scenario</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ground Truth</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Your Model</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Result</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {scenarios.map((scenario) => {
-                    const result = results?.results.find(r => r.id === scenario.id);
-                    return (
-                      <tr 
-                        key={scenario.id} 
-                        className={result ? (result.isCorrect ? "bg-green-50" : "bg-red-50") : "bg-white"}
-                      >
-                        <td className="px-4 py-3 text-sm text-gray-600">{scenario.id}</td>
-                        <td className="px-4 py-2">
-                          <img 
-                            src={scenario.image} 
-                            alt={scenario.text}
-                            className="w-12 h-12 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => setModalImage({ id: scenario.id, image: scenario.image, text: scenario.text })}
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-800">{scenario.text}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
-                            {getLabelEmoji(scenario.expected)} {scenario.expected}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {result ? (
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">#</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Image</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Scenario</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ground Truth</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Your Model</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {results.results.map((result) => {
+                      const scenario = scenarios.find(s => s.id === result.id);
+                      return (
+                        <tr key={result.id} className={result.isCorrect ? "bg-green-50" : "bg-red-50"}>
+                          <td className="px-4 py-3 text-sm text-gray-600">{result.id}</td>
+                          <td className="px-4 py-2">
+                            {scenario && (
+                              <img 
+                                src={scenario.image} 
+                                alt={result.text}
+                                className="w-12 h-12 object-cover rounded"
+                              />
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-800">{result.text}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
+                              {getLabelEmoji(result.expected)} {result.expected}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
                             <Popover>
                               <PopoverTrigger asChild>
                                 <button className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors">
@@ -580,29 +597,32 @@ function App() {
                                 </div>
                               </PopoverContent>
                             </Popover>
-                          ) : (
-                            <span className="text-gray-300">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {result ? (
-                            result.isCorrect ? (
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {result.isCorrect ? (
                               <CheckCircle className="w-6 h-6 text-green-600 mx-auto" />
                             ) : (
                               <XCircle className="w-6 h-6 text-red-600 mx-auto" />
-                            )
-                          ) : (
-                            <span className="text-gray-300">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!results && !isLoading && (
+          <Card className="bg-gray-50 border-dashed border-2">
+            <CardContent className="py-12 text-center text-gray-500">
+              <PawPrint className="w-16 h-16 mx-auto mb-4 opacity-30" />
+              <p className="text-lg">Write your moderation instructions above and click "Run Test" to see how well your AI safety rules work!</p>
+            </CardContent>
+          </Card>
+        )}
       </main>
 
       <footer className="mt-8 py-4 text-center text-sm text-gray-500">
