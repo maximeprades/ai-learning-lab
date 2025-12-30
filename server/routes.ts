@@ -106,7 +106,7 @@ const scenarioUpload = multer({
       cb(new Error("Only PNG, JPEG, and WebP images are allowed"));
     }
   },
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 const DEFAULT_PROMPT_TEMPLATE = `{{STUDENT_PROMPT}}

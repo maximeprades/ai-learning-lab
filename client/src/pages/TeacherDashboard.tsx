@@ -43,8 +43,12 @@ function formatTime(dateString: string | null) {
   return date.toLocaleDateString();
 }
 
+const TEACHER_AUTH_KEY = "ailab.teacher_auth";
+
 export default function TeacherDashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem(TEACHER_AUTH_KEY) === "true";
+  });
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +83,7 @@ export default function TeacherDashboard() {
       });
 
       if (response.ok) {
+        localStorage.setItem(TEACHER_AUTH_KEY, "true");
         setIsAuthenticated(true);
         setPassword("");
         setPasswordError("");
