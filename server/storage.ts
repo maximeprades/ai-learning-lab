@@ -74,6 +74,22 @@ export class DatabaseStorage implements IStorage {
     return student;
   }
 
+  async registerStudent(email: string, name: string, teamName: string): Promise<Student> {
+    const existing = await this.getStudent(email);
+    if (existing) {
+      const [updated] = await db.update(students)
+        .set({ name, teamName, lastActive: new Date() })
+        .where(eq(students.email, email))
+        .returning();
+      return updated;
+    }
+    
+    const [student] = await db.insert(students)
+      .values({ email, name, teamName })
+      .returning();
+    return student;
+  }
+
   async getStudent(email: string): Promise<Student | undefined> {
     const [student] = await db.select().from(students).where(eq(students.email, email));
     return student;

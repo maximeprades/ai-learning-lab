@@ -6,12 +6,14 @@ import SafetyLab from "./App";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import PRDGenerator from "./pages/PRDGenerator";
 import PrecisionRecallGame from "./pages/PrecisionRecallGame";
+import RegisterForClass from "./pages/RegisterForClass";
 import "./index.css";
 
 function RootApp() {
   return (
     <Switch>
       <Route path="/" component={HomePage} />
+      <Route path="/register" component={RegisterForClass} />
       <Route path="/safety-lab" component={SafetyLab} />
       <Route path="/teacher" component={TeacherDashboard} />
       <Route path="/prd-generator" component={PRDGenerator} />

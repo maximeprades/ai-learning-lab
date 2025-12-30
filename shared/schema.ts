@@ -11,6 +11,8 @@ export const users = pgTable("users", {
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
+  name: text("name"),
+  teamName: text("team_name"),
   isRunningTest: boolean("is_running_test").default(false),
   highestScore: integer("highest_score").default(0),
   promptCount: integer("prompt_count").default(0),

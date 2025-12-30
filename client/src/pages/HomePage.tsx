@@ -1,4 +1,4 @@
-import { PawPrint, Target, FileText, Shield, ArrowRight } from "lucide-react";
+import { PawPrint, Target, FileText, Shield, ArrowRight, UserPlus } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -11,6 +11,16 @@ export default function HomePage() {
           <p className="text-lg text-gray-500 font-light">
             Choose your adventure
           </p>
+        </div>
+
+        <div className="flex justify-center mb-8">
+          <a href="/register" className="group">
+            <div className="flex items-center gap-3 px-6 py-3 rounded-full border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 transition-all duration-300 hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5">
+              <UserPlus className="w-5 h-5" />
+              <span className="font-medium">Register for Class</span>
+              <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
+            </div>
+          </a>
         </div>
         
         <div className="grid md:grid-cols-3 gap-5 mb-10">

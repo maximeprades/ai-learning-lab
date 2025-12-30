@@ -349,6 +349,34 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/register-student", async (req, res) => {
+    try {
+      const { name, email, teamName } = req.body;
+      
+      if (!name || typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "Valid email is required" });
+      }
+      if (!teamName || typeof teamName !== "string" || !teamName.trim()) {
+        return res.status(400).json({ error: "Team name is required" });
+      }
+      
+      const student = await storage.registerStudent(
+        email.toLowerCase().trim(),
+        name.trim(),
+        teamName.trim()
+      );
+      
+      await broadcastStudentUpdate();
+      res.json({ success: true, student });
+    } catch (error: any) {
+      console.error("Student registration error:", error);
+      res.status(500).json({ error: error.message || "Failed to register" });
+    }
+  });
+
   app.post("/api/student/login", async (req, res) => {
     try {
       const { email } = req.body;
