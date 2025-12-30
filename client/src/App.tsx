@@ -396,6 +396,15 @@ function App() {
                   <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                     #{scenario.id}
                   </div>
+                  <div className={`absolute bottom-1 right-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium backdrop-blur-sm ${
+                    scenario.expected.includes("Allowed") 
+                      ? "bg-green-500/80 text-white" 
+                      : scenario.expected.includes("Prohibited") 
+                        ? "bg-red-500/80 text-white" 
+                        : "bg-amber-500/80 text-white"
+                  }`}>
+                    {scenario.expected.includes("Allowed") ? "Allowed" : scenario.expected.includes("Prohibited") ? "Prohibited" : "Disturbing"}
+                  </div>
                 </div>
               ))}
             </div>
