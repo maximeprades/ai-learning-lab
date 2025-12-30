@@ -538,32 +538,42 @@ function App() {
           </Card>
         </div>
 
-        {results && (
-          <Card className="border-2 border-indigo-200">
-            <CardHeader className="bg-indigo-50 border-b">
-              <CardTitle className="flex items-center justify-between">
-                <span>Test Results</span>
+        <Card className="border-2 border-indigo-200">
+          <CardHeader className="bg-indigo-50 border-b">
+            <CardTitle className="flex items-center justify-between">
+              <span>{results ? "Test Results" : "Scenario Overview"}</span>
+              {results && (
                 <span className={`text-xl ${results.score === results.total ? 'text-green-600' : results.score >= 7 ? 'text-yellow-600' : 'text-red-600'}`}>
                   Score: {results.score}/{results.total} 
                   {results.score === results.total && " 🎉 Perfect!"}
                 </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">#</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Image</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Scenario</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ground Truth</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Your Model</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Result</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {results.results.map((result) => {
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 relative">
+            {isLoading && (
+              <div className="absolute inset-0 bg-gray-200/70 z-10 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  <span className="text-sm font-medium text-gray-700">Running test...</span>
+                </div>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">#</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Image</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Scenario</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ground Truth</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Your Model</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Result</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {results ? (
+                    results.results.map((result) => {
                       const scenario = scenarios.find(s => s.id === result.id);
                       return (
                         <tr key={result.id} className={result.isCorrect ? "bg-green-50" : "bg-red-50"}>
@@ -607,22 +617,38 @@ function App() {
                           </td>
                         </tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {!results && !isLoading && (
-          <Card className="bg-gray-50 border-dashed border-2">
-            <CardContent className="py-12 text-center text-gray-500">
-              <PawPrint className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <p className="text-lg">Write your moderation instructions above and click "Run Test" to see how well your AI safety rules work!</p>
-            </CardContent>
-          </Card>
-        )}
+                    })
+                  ) : (
+                    scenarios.map((scenario) => (
+                      <tr key={scenario.id} className="bg-white">
+                        <td className="px-4 py-3 text-sm text-gray-600">{scenario.id}</td>
+                        <td className="px-4 py-2">
+                          <img 
+                            src={scenario.image} 
+                            alt={scenario.text}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-800">{scenario.text}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
+                            {getLabelEmoji(scenario.expected)} {scenario.expected}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-gray-400 text-sm">—</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-gray-400 text-sm">—</span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </main>
 
       <footer className="mt-8 py-4 text-center text-sm text-gray-500">
