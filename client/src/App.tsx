@@ -814,25 +814,25 @@ function App() {
       </Dialog>
 
       <Dialog open={showLeaderboard} onOpenChange={setShowLeaderboard}>
-        <DialogContent className="max-w-md">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-500" />
+        <DialogContent className="max-w-2xl w-[90vw]">
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-amber-500" />
             Leaderboard
             <Button
               variant="outline"
               size="sm"
               onClick={fetchLeaderboard}
               disabled={leaderboardLoading}
-              className="ml-2 h-7 w-7 p-0"
+              className="ml-2 h-8 w-8 p-0"
             >
               {leaderboardLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className="w-4 h-4" />
               )}
             </Button>
           </DialogTitle>
-          <div className="space-y-2 pt-4 max-h-[400px] overflow-y-auto">
+          <div className="space-y-3 pt-4 max-h-[60vh] overflow-y-auto">
             {leaderboardLoading && leaderboardData.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
