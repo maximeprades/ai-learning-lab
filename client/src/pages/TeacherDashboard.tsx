@@ -320,6 +320,7 @@ export default function TeacherDashboard() {
   };
 
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+  const [deleteAllPRConfirm, setDeleteAllPRConfirm] = useState(false);
 
   const handleDeleteAllStudents = async () => {
     try {
@@ -331,6 +332,19 @@ export default function TeacherDashboard() {
       }
     } catch (error) {
       console.error("Failed to delete all students:", error);
+    }
+  };
+
+  const handleDeleteAllPRStudents = async () => {
+    try {
+      const response = await fetch("/api/teacher/pr-students", {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setDeleteAllPRConfirm(false);
+      }
+    } catch (error) {
+      console.error("Failed to delete all PR students:", error);
     }
   };
 
@@ -611,7 +625,7 @@ export default function TeacherDashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-green-800">
                 <Users className="w-5 h-5" />
-                Student Dashboard ({students.length} students)
+                Prompt 101 Leaderboard ({students.length} students)
               </CardTitle>
               {students.length > 0 && (
                 <Button 
@@ -703,10 +717,23 @@ export default function TeacherDashboard() {
 
         <Card className="border-2 border-indigo-200 bg-indigo-50">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-indigo-800">
-              <Target className="w-5 h-5" />
-              Precision & Recall Leaderboard ({prStudents.length} students)
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-indigo-800">
+                <Target className="w-5 h-5" />
+                Precision & Recall Leaderboard ({prStudents.length} students)
+              </CardTitle>
+              {prStudents.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={() => setDeleteAllPRConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {prStudents.length === 0 ? (
@@ -1007,7 +1034,7 @@ export default function TeacherDashboard() {
       <Dialog open={deleteAllConfirm} onOpenChange={setDeleteAllConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete All Students</DialogTitle>
+            <DialogTitle>Delete All Prompt 101 Students</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete all {students.length} students? This will remove all their prompt versions and test history. This action cannot be undone.
             </DialogDescription>
@@ -1017,6 +1044,25 @@ export default function TeacherDashboard() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteAllStudents}>
+              Delete All
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteAllPRConfirm} onOpenChange={setDeleteAllPRConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete All Precision & Recall Students</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete all {prStudents.length} students from the Precision & Recall leaderboard? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteAllPRConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAllPRStudents}>
               Delete All
             </Button>
           </div>

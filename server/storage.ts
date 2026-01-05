@@ -282,6 +282,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(precisionRecallStudents.id, id));
   }
 
+  async deleteAllPRStudents(): Promise<void> {
+    await db.delete(precisionRecallStudents);
+  }
+
   async getDemoPrd(key: string): Promise<string | null> {
     const [prd] = await db.select()
       .from(demoPrds)

@@ -595,6 +595,17 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/teacher/pr-students", async (_req, res) => {
+    try {
+      await storage.deleteAllPRStudents();
+      await broadcastPRStudentUpdate();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete all PR students error:", error);
+      res.status(500).json({ error: "Failed to delete all students" });
+    }
+  });
+
   app.post("/api/verify-teacher", (req, res) => {
     const { password } = req.body;
     if (password === TEACHER_PASSWORD) {
