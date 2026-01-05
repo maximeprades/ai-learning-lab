@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Mail, History, Trophy, RefreshCw, Stethoscope } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Mail, History, Trophy, RefreshCw, Stethoscope, Clock } from "lucide-react";
 import "@fontsource/inter";
 
 interface TestResult {
@@ -647,15 +647,19 @@ function App() {
             {isLoading && (
               <div className="absolute inset-0 bg-gray-200/70 z-10 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
                   {queuePosition ? (
                     <>
-                      <span className="text-lg font-semibold text-gray-800">In Queue</span>
-                      <span className="text-sm text-gray-600">Position #{queuePosition}</span>
-                      <span className="text-xs text-gray-500">Please wait for your turn...</span>
+                      <Clock className="w-10 h-10 text-amber-500" />
+                      <span className="text-xl font-bold text-amber-700">Waiting in Queue</span>
+                      <div className="bg-amber-100 px-4 py-2 rounded-full">
+                        <span className="text-2xl font-bold text-amber-800">#{queuePosition}</span>
+                      </div>
+                      <span className="text-sm text-gray-600">Other students are testing ahead of you</span>
+                      <span className="text-xs text-gray-500">Your test will start automatically...</span>
                     </>
                   ) : jobProgress ? (
                     <>
+                      <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
                       <span className="text-lg font-semibold text-gray-800">Testing Scenarios</span>
                       <div className="w-48 bg-gray-300 rounded-full h-2.5">
                         <div 

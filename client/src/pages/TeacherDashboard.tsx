@@ -887,22 +887,30 @@ export default function TeacherDashboard() {
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Active Jobs ({queueJobs.length})</h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {queueJobs.map((job) => (
-                    <div key={job.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
+                    <div key={job.id} className={`flex items-center justify-between p-2 rounded border text-sm ${
+                      job.status === "processing" ? "bg-blue-50 border-blue-200" :
+                      job.status === "queued" ? "bg-amber-50 border-amber-200" :
+                      "bg-white"
+                    }`}>
                       <div className="flex items-center gap-3">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                           job.status === "processing" ? "bg-blue-100 text-blue-700" :
-                          job.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                          job.status === "queued" ? "bg-amber-100 text-amber-700" :
                           job.status === "completed" ? "bg-green-100 text-green-700" :
                           "bg-red-100 text-red-700"
                         }`}>
-                          {job.status === "processing" ? `${job.currentScenario}/${job.totalScenarios}` : job.status}
+                          {job.status === "processing" 
+                            ? `Testing ${job.currentScenario}/${job.totalScenarios}` 
+                            : job.status === "queued" 
+                              ? `Waiting #${job.queuePosition}` 
+                              : job.status}
                         </span>
                         <span className="text-gray-700 truncate max-w-[150px]" title={job.email}>{job.email}</span>
                         <span className={`text-xs ${job.provider === "openai" ? "text-emerald-600" : "text-orange-600"}`}>
                           {job.model}
                         </span>
                       </div>
-                      {job.status === "pending" && (
+                      {job.status === "queued" && (
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => cancelJob(job.id)}>
                           <XCircle className="w-4 h-4" />
                         </Button>
