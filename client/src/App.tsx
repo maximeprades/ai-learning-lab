@@ -99,7 +99,17 @@ function App() {
       try {
         const data = JSON.parse(event.data);
         
-        if (data.type === "job_queued") {
+        if (data.type === "job_restored") {
+          setIsLoading(true);
+          setCurrentJobId(data.job?.id || null);
+          if (data.status === "queued") {
+            setQueuePosition(data.job?.queuePosition || 1);
+            setJobProgress(null);
+          } else if (data.status === "processing") {
+            setQueuePosition(null);
+            setJobProgress({ current: data.job?.current || 0, total: data.job?.total || 10 });
+          }
+        } else if (data.type === "job_queued") {
           setQueuePosition(data.job?.queuePosition || null);
         } else if (data.type === "job_started") {
           setQueuePosition(null);

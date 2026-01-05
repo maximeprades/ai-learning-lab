@@ -446,10 +446,27 @@ export async function registerRoutes(
           studentClients.set(data.email.toLowerCase(), ws);
           const existingJob = queueManager.getJobByEmail(data.email.toLowerCase());
           if (existingJob) {
-            ws.send(JSON.stringify({ 
-              type: existingJob.status === "processing" ? "job_started" : "job_queued",
-              job: { id: existingJob.id, queuePosition: existingJob.queuePosition }
-            }));
+            if (existingJob.status === "processing") {
+              ws.send(JSON.stringify({ 
+                type: "job_restored",
+                status: "processing",
+                job: { 
+                  id: existingJob.id, 
+                  current: existingJob.currentScenario || 0,
+                  total: existingJob.scenarios.length
+                }
+              }));
+            } else {
+              ws.send(JSON.stringify({ 
+                type: "job_restored",
+                status: "queued",
+                job: { 
+                  id: existingJob.id, 
+                  queuePosition: existingJob.queuePosition,
+                  total: existingJob.scenarios.length
+                }
+              }));
+            }
           }
         }
       } catch (e) {
