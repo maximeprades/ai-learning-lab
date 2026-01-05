@@ -91,6 +91,30 @@ export default function TeacherDashboard() {
     anthropic: { pending: number; processing: number; paused: boolean; concurrentLimit: number };
     total: { pending: number; processing: number; completed: number; failed: number };
   } | null>(null);
+
+  const transformQueueStats = (stats: any) => {
+    if (!stats) return null;
+    return {
+      openai: {
+        pending: stats.providers?.openai?.queued || 0,
+        processing: stats.providers?.openai?.processing || 0,
+        paused: stats.providers?.openai?.isPaused || false,
+        concurrentLimit: stats.providers?.openai?.maxWorkers || 3,
+      },
+      anthropic: {
+        pending: stats.providers?.anthropic?.queued || 0,
+        processing: stats.providers?.anthropic?.processing || 0,
+        paused: stats.providers?.anthropic?.isPaused || false,
+        concurrentLimit: stats.providers?.anthropic?.maxWorkers || 3,
+      },
+      total: {
+        pending: stats.totalQueued || 0,
+        processing: stats.totalProcessing || 0,
+        completed: stats.totalCompleted || 0,
+        failed: stats.totalFailed || 0,
+      },
+    };
+  };
   const [queueJobs, setQueueJobs] = useState<Array<{
     id: string;
     email: string;
@@ -179,7 +203,7 @@ export default function TeacherDashboard() {
           } else if (data.type === "api_log") {
             setApiLogs(prev => [data.log, ...prev].slice(0, 200));
           } else if (data.type === "queue_stats") {
-            setQueueStats(data.stats);
+            setQueueStats(transformQueueStats(data.stats));
           } else if (data.type === "queue_jobs") {
             setQueueJobs(data.jobs);
           }
@@ -222,7 +246,7 @@ export default function TeacherDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        setQueueStats(data.stats);
+        setQueueStats(transformQueueStats(data.stats));
       }
     } catch (error) {
       console.error("Failed to pause queue:", error);
@@ -238,7 +262,7 @@ export default function TeacherDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        setQueueStats(data.stats);
+        setQueueStats(transformQueueStats(data.stats));
       }
     } catch (error) {
       console.error("Failed to resume queue:", error);
