@@ -62,7 +62,7 @@ function App() {
   const [results, setResults] = useState<TestResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modalImage, setModalImage] = useState<{ id: number; image: string; text: string } | null>(null);
+  const [modalImage, setModalImage] = useState<{ id: number; image: string; text: string; expected: string } | null>(null);
 
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>("draft");
@@ -467,7 +467,7 @@ function App() {
                 <div
                   key={scenario.id}
                   className="relative group cursor-pointer"
-                  onClick={() => setModalImage({ id: scenario.id, image: scenario.image, text: scenario.text })}
+                  onClick={() => setModalImage({ id: scenario.id, image: scenario.image, text: scenario.text, expected: scenario.expected })}
                 >
                   <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:shadow-lg hover:border-purple-400 transition-all">
                     <img
@@ -777,7 +777,7 @@ function App() {
                   const currentIndex = scenarios.findIndex(s => s.id === modalImage.id);
                   const prevIndex = currentIndex === 0 ? scenarios.length - 1 : currentIndex - 1;
                   const prev = scenarios[prevIndex];
-                  setModalImage({ id: prev.id, image: prev.image, text: prev.text });
+                  setModalImage({ id: prev.id, image: prev.image, text: prev.text, expected: prev.expected });
                 }}
                 className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
               >
@@ -789,7 +789,7 @@ function App() {
                   const currentIndex = scenarios.findIndex(s => s.id === modalImage.id);
                   const nextIndex = currentIndex === scenarios.length - 1 ? 0 : currentIndex + 1;
                   const next = scenarios[nextIndex];
-                  setModalImage({ id: next.id, image: next.image, text: next.text });
+                  setModalImage({ id: next.id, image: next.image, text: next.text, expected: next.expected });
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
               >
@@ -800,12 +800,19 @@ function App() {
                 alt={modalImage.text}
                 className="w-full h-auto max-h-[80vh] object-contain bg-gray-100"
               />
-              <div className="p-4 bg-white">
+              <div className="p-4 bg-white flex items-center justify-between">
                 <p className="text-base font-medium text-gray-800">
                   <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
                     #{modalImage.id}
                   </span>
                 </p>
+                <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                  modalImage.expected === "Allowed" ? "bg-green-100 text-green-800" :
+                  modalImage.expected === "Prohibited" ? "bg-red-100 text-red-800" :
+                  "bg-yellow-100 text-yellow-800"
+                }`}>
+                  Ground Truth: {modalImage.expected === "Allowed" ? "✅ Allowed" : modalImage.expected === "Prohibited" ? "🚫 Prohibited" : "⚠️ Disturbing"}
+                </span>
               </div>
             </div>
           )}
