@@ -33,6 +33,7 @@ export interface IStorage {
   getStudentById(id: number): Promise<Student | undefined>;
   getAllStudents(): Promise<Student[]>;
   deleteStudent(id: number): Promise<void>;
+  deleteAllStudents(): Promise<void>;
   setStudentRunningTest(email: string, isRunning: boolean): Promise<void>;
   updateStudentScore(email: string, score: number): Promise<void>;
   incrementPromptCount(email: string): Promise<void>;
@@ -107,6 +108,11 @@ export class DatabaseStorage implements IStorage {
   async deleteStudent(id: number): Promise<void> {
     await this.deletePromptVersionsByStudent(id);
     await db.delete(students).where(eq(students.id, id));
+  }
+
+  async deleteAllStudents(): Promise<void> {
+    await db.delete(promptVersions);
+    await db.delete(students);
   }
 
   async setStudentRunningTest(email: string, isRunning: boolean): Promise<void> {

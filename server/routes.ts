@@ -691,6 +691,17 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/teacher/students", async (_req, res) => {
+    try {
+      await storage.deleteAllStudents();
+      await broadcastStudentUpdate();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete all students error:", error);
+      res.status(500).json({ error: "Failed to delete all students" });
+    }
+  });
+
   app.get("/api/app-lock", async (_req, res) => {
     try {
       const isLocked = await storage.isAppLocked();

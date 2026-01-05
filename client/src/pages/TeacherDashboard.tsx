@@ -319,6 +319,21 @@ export default function TeacherDashboard() {
     }
   };
 
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+
+  const handleDeleteAllStudents = async () => {
+    try {
+      const response = await fetch("/api/teacher/students", {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setDeleteAllConfirm(false);
+      }
+    } catch (error) {
+      console.error("Failed to delete all students:", error);
+    }
+  };
+
   const handleSaveScenario = async () => {
     if (!scenarioForm.text.trim()) return;
     
@@ -593,10 +608,23 @@ export default function TeacherDashboard() {
 
         <Card className="border-2 border-green-200 bg-green-50">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-green-800">
-              <Users className="w-5 h-5" />
-              Student Dashboard ({students.length} students)
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-green-800">
+                <Users className="w-5 h-5" />
+                Student Dashboard ({students.length} students)
+              </CardTitle>
+              {students.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={() => setDeleteAllConfirm(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {students.length === 0 ? (
@@ -971,6 +999,25 @@ export default function TeacherDashboard() {
             </Button>
             <Button variant="destructive" onClick={() => deleteConfirmDialog && handleDeleteStudent(deleteConfirmDialog.id, deleteConfirmDialog.type)}>
               Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteAllConfirm} onOpenChange={setDeleteAllConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete All Students</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete all {students.length} students? This will remove all their prompt versions and test history. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteAllConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAllStudents}>
+              Delete All
             </Button>
           </div>
         </DialogContent>
