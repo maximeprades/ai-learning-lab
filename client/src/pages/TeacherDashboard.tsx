@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft, Target, ScrollText, AlertCircle, CheckCircle2, Send } from "lucide-react";
+import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft, Target, ScrollText, AlertCircle, CheckCircle2, Send, Pause, Play, ListOrdered, XCircle } from "lucide-react";
 
 interface Student {
   id: number;
@@ -86,6 +86,24 @@ export default function TeacherDashboard() {
   const [showLogs, setShowLogs] = useState(true);
   const logsEndRef = useRef<HTMLDivElement>(null);
   
+  const [queueStats, setQueueStats] = useState<{
+    openai: { pending: number; processing: number; paused: boolean; concurrentLimit: number };
+    anthropic: { pending: number; processing: number; paused: boolean; concurrentLimit: number };
+    total: { pending: number; processing: number; completed: number; failed: number };
+  } | null>(null);
+  const [queueJobs, setQueueJobs] = useState<Array<{
+    id: string;
+    email: string;
+    provider: string;
+    model: string;
+    status: string;
+    queuePosition: number;
+    currentScenario: number;
+    totalScenarios: number;
+    createdAt: string;
+    startedAt?: string;
+  }>>([]);
+  
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -160,6 +178,10 @@ export default function TeacherDashboard() {
             setApiLogs(data.logs);
           } else if (data.type === "api_log") {
             setApiLogs(prev => [data.log, ...prev].slice(0, 200));
+          } else if (data.type === "queue_stats") {
+            setQueueStats(data.stats);
+          } else if (data.type === "queue_jobs") {
+            setQueueJobs(data.jobs);
           }
         } catch (e) {
           console.error("WebSocket message error:", e);
@@ -188,6 +210,46 @@ export default function TeacherDashboard() {
       }
     } catch (error) {
       console.error("Failed to toggle app lock:", error);
+    }
+  };
+
+  const pauseQueue = async (provider?: string) => {
+    try {
+      const response = await fetch("/api/queue/pause", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setQueueStats(data.stats);
+      }
+    } catch (error) {
+      console.error("Failed to pause queue:", error);
+    }
+  };
+
+  const resumeQueue = async (provider?: string) => {
+    try {
+      const response = await fetch("/api/queue/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setQueueStats(data.stats);
+      }
+    } catch (error) {
+      console.error("Failed to resume queue:", error);
+    }
+  };
+
+  const cancelJob = async (jobId: string) => {
+    try {
+      await fetch(`/api/queue/cancel/${jobId}`, { method: "POST" });
+    } catch (error) {
+      console.error("Failed to cancel job:", error);
     }
   };
 
@@ -652,6 +714,128 @@ export default function TeacherDashboard() {
                   </tbody>
                 </table>
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-purple-200 bg-purple-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-purple-800">
+                <ListOrdered className="w-5 h-5" />
+                Queue Manager
+              </div>
+              <div className="flex items-center gap-2">
+                {queueStats?.openai.paused && queueStats?.anthropic.paused ? (
+                  <Button size="sm" variant="outline" onClick={() => resumeQueue()} className="bg-green-100 text-green-700 hover:bg-green-200">
+                    <Play className="w-4 h-4 mr-1" /> Resume All
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => pauseQueue()} className="bg-red-100 text-red-700 hover:bg-red-200">
+                    <Pause className="w-4 h-4 mr-1" /> Pause All
+                  </Button>
+                )}
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-white rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-emerald-700">OpenAI</span>
+                  {queueStats?.openai.paused ? (
+                    <Button size="sm" variant="ghost" onClick={() => resumeQueue("openai")} className="h-7 text-xs text-green-600">
+                      <Play className="w-3 h-3 mr-1" /> Resume
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={() => pauseQueue("openai")} className="h-7 text-xs text-red-600">
+                      <Pause className="w-3 h-3 mr-1" /> Pause
+                    </Button>
+                  )}
+                </div>
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pending:</span>
+                    <span className="font-medium">{queueStats?.openai.pending || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Processing:</span>
+                    <span className="font-medium">{queueStats?.openai.processing || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`font-medium ${queueStats?.openai.paused ? "text-red-600" : "text-green-600"}`}>
+                      {queueStats?.openai.paused ? "Paused" : "Active"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-3 bg-white rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-orange-700">Anthropic</span>
+                  {queueStats?.anthropic.paused ? (
+                    <Button size="sm" variant="ghost" onClick={() => resumeQueue("anthropic")} className="h-7 text-xs text-green-600">
+                      <Play className="w-3 h-3 mr-1" /> Resume
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={() => pauseQueue("anthropic")} className="h-7 text-xs text-red-600">
+                      <Pause className="w-3 h-3 mr-1" /> Pause
+                    </Button>
+                  )}
+                </div>
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pending:</span>
+                    <span className="font-medium">{queueStats?.anthropic.pending || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Processing:</span>
+                    <span className="font-medium">{queueStats?.anthropic.processing || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`font-medium ${queueStats?.anthropic.paused ? "text-red-600" : "text-green-600"}`}>
+                      {queueStats?.anthropic.paused ? "Paused" : "Active"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {queueJobs.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Active Jobs ({queueJobs.length})</h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {queueJobs.map((job) => (
+                    <div key={job.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          job.status === "processing" ? "bg-blue-100 text-blue-700" :
+                          job.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                          job.status === "completed" ? "bg-green-100 text-green-700" :
+                          "bg-red-100 text-red-700"
+                        }`}>
+                          {job.status === "processing" ? `${job.currentScenario}/${job.totalScenarios}` : job.status}
+                        </span>
+                        <span className="text-gray-700 truncate max-w-[150px]" title={job.email}>{job.email}</span>
+                        <span className={`text-xs ${job.provider === "openai" ? "text-emerald-600" : "text-orange-600"}`}>
+                          {job.model}
+                        </span>
+                      </div>
+                      {job.status === "pending" && (
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => cancelJob(job.id)}>
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {queueJobs.length === 0 && (
+              <p className="text-center text-gray-500 text-sm py-4">No jobs in queue. Student tests will appear here when submitted.</p>
             )}
           </CardContent>
         </Card>

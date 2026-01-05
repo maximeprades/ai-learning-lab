@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -79,6 +79,123 @@ function App() {
   const [showPromptDoctorModal, setShowPromptDoctorModal] = useState(false);
   const [promptDoctorLoading, setPromptDoctorLoading] = useState(false);
   
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [jobProgress, setJobProgress] = useState<{ current: number; total: number } | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  
+  const connectWebSocket = useCallback((userEmail: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    wsRef.current = ws;
+    
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "student_subscribe", email: userEmail }));
+    };
+    
+    ws.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === "job_queued") {
+          setQueuePosition(data.job?.queuePosition || null);
+        } else if (data.type === "job_started") {
+          setQueuePosition(null);
+          setJobProgress({ current: 0, total: data.job?.totalScenarios || 10 });
+        } else if (data.type === "job_progress") {
+          setJobProgress({ current: data.job?.currentScenario || 0, total: data.job?.totalScenarios || 10 });
+        } else if (data.type === "job_completed") {
+          setQueuePosition(null);
+          setJobProgress(null);
+          setCurrentJobId(null);
+          setIsLoading(false);
+          
+          if (data.results) {
+            setResults({
+              results: data.results,
+              score: data.results.filter((r: TestResult) => r.isCorrect).length,
+              total: data.results.length,
+            });
+            
+            if (promptDoctorEnabled && email) {
+              setPromptDoctorLoading(true);
+              try {
+                const doctorResponse = await fetch("/api/prompt-doctor", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ studentPrompt: instructions, model: selectedModel }),
+                });
+                if (doctorResponse.ok) {
+                  const feedback = await doctorResponse.json();
+                  setPromptDoctorFeedback(feedback);
+                  setShowPromptDoctorModal(true);
+                }
+              } catch (e) {
+                console.error("Prompt Doctor error:", e);
+              } finally {
+                setPromptDoctorLoading(false);
+              }
+            }
+            
+            if (email) {
+              const loginResponse = await fetch("/api/student/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+              });
+              if (loginResponse.ok) {
+                const loginData = await loginResponse.json();
+                setPromptVersions(loginData.versions || []);
+                if (loginData.versions?.length > 0) {
+                  const matchingVersion = loginData.versions.find((v: PromptVersion) => v.text === instructions.trim());
+                  if (matchingVersion) {
+                    setSelectedVersion(matchingVersion.id);
+                  } else {
+                    setSelectedVersion(loginData.versions[loginData.versions.length - 1].id);
+                  }
+                }
+              }
+            }
+          }
+        } else if (data.type === "job_failed") {
+          setQueuePosition(null);
+          setJobProgress(null);
+          setCurrentJobId(null);
+          setIsLoading(false);
+          setError(data.error || "Test failed. Please try again.");
+        } else if (data.type === "job_cancelled") {
+          setQueuePosition(null);
+          setJobProgress(null);
+          setCurrentJobId(null);
+          setIsLoading(false);
+          setError(data.message || "Your test was cancelled.");
+        }
+      } catch (e) {
+        console.error("WebSocket message error:", e);
+      }
+    };
+    
+    ws.onclose = () => {
+      wsRef.current = null;
+    };
+    
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [promptDoctorEnabled, instructions, selectedModel, email]);
+
+  useEffect(() => {
+    if (email) {
+      connectWebSocket(email);
+    }
+    return () => {
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [email, connectWebSocket]);
 
   useEffect(() => {
     fetch("/api/scenarios")
@@ -189,6 +306,8 @@ function App() {
     setIsLoading(true);
     setError(null);
     setResults(null);
+    setQueuePosition(null);
+    setJobProgress(null);
 
     try {
       const response = await fetch("/api/run-test", {
@@ -201,62 +320,26 @@ function App() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         const errorMsg = data.details || data.error || "Failed to run test";
         throw new Error(errorMsg);
       }
 
-      const data: TestResponse = await response.json();
-      setResults(data);
-
-      if (promptDoctorEnabled) {
-        setPromptDoctorLoading(true);
-        try {
-          const doctorResponse = await fetch("/api/prompt-doctor", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              studentPrompt: instructions,
-              model: selectedModel
-            }),
-          });
-          
-          if (doctorResponse.ok) {
-            const feedback = await doctorResponse.json();
-            setPromptDoctorFeedback(feedback);
-            setShowPromptDoctorModal(true);
-          }
-        } catch (doctorErr) {
-          console.error("Prompt Doctor error:", doctorErr);
-        } finally {
-          setPromptDoctorLoading(false);
+      if (data.queued) {
+        setCurrentJobId(data.jobId);
+        if (data.queuePosition > 1) {
+          setQueuePosition(data.queuePosition);
+        } else {
+          setJobProgress({ current: 0, total: 10 });
         }
-      }
-
-      if (email) {
-        const loginResponse = await fetch("/api/student/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-        
-        if (loginResponse.ok) {
-          const loginData = await loginResponse.json();
-          setPromptVersions(loginData.versions || []);
-          if (loginData.versions && loginData.versions.length > 0) {
-            const matchingVersion = loginData.versions.find((v: PromptVersion) => v.text === instructions.trim());
-            if (matchingVersion) {
-              setSelectedVersion(matchingVersion.id);
-            } else {
-              setSelectedVersion(loginData.versions[loginData.versions.length - 1].id);
-            }
-          }
-        }
+      } else {
+        setResults(data);
+        setIsLoading(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -531,7 +614,8 @@ function App() {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Testing...
+                      {queuePosition ? `Queued #${queuePosition}` : 
+                       jobProgress ? `Testing ${jobProgress.current}/${jobProgress.total}` : "Starting..."}
                     </>
                   ) : promptDoctorLoading ? (
                     <>
@@ -562,9 +646,28 @@ function App() {
           <CardContent className="p-0 relative">
             {isLoading && (
               <div className="absolute inset-0 bg-gray-200/70 z-10 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                  <span className="text-sm font-medium text-gray-700">Running test...</span>
+                  {queuePosition ? (
+                    <>
+                      <span className="text-lg font-semibold text-gray-800">In Queue</span>
+                      <span className="text-sm text-gray-600">Position #{queuePosition}</span>
+                      <span className="text-xs text-gray-500">Please wait for your turn...</span>
+                    </>
+                  ) : jobProgress ? (
+                    <>
+                      <span className="text-lg font-semibold text-gray-800">Testing Scenarios</span>
+                      <div className="w-48 bg-gray-300 rounded-full h-2.5">
+                        <div 
+                          className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" 
+                          style={{ width: `${(jobProgress.current / jobProgress.total) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-gray-600">{jobProgress.current} of {jobProgress.total} complete</span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-700">Starting test...</span>
+                  )}
                 </div>
               </div>
             )}

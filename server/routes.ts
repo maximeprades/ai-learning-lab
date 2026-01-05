@@ -7,11 +7,13 @@ import path from "path";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
 import { storage } from "./storage";
+import { queueManager, QueueJob, QueueStats } from "./queue";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
 const studentRateLimits = new Map<string, number>();
 const studentInFlight = new Set<string>();
+const studentEnqueueLocks = new Set<string>();
 const RATE_LIMIT_MS = 5000;
 
 interface ApiLog {
@@ -116,6 +118,15 @@ function invalidateCache() {
 }
 
 function checkRateLimit(email: string): { allowed: boolean; reason?: string } {
+  const existingJob = queueManager.getJobByEmail(email);
+  if (existingJob) {
+    return { 
+      allowed: false, 
+      reason: existingJob.status === "processing" 
+        ? "You already have a test in progress. Please wait for it to complete."
+        : "You already have a test in the queue. Please wait for your turn." 
+    };
+  }
   if (studentInFlight.has(email)) {
     return { allowed: false, reason: "You already have a test in progress. Please wait for it to complete." };
   }
@@ -257,12 +268,142 @@ async function getActiveScenarios() {
   return defaultScenarios;
 }
 
+const studentClients = new Map<string, WebSocket>();
+
+function broadcastToStudent(email: string, data: any) {
+  const client = studentClients.get(email);
+  if (client && client.readyState === WebSocket.OPEN) {
+    client.send(JSON.stringify(data));
+  }
+}
+
+function broadcastQueueStats(stats: QueueStats) {
+  broadcastToTeachers({ type: "queue_stats", stats });
+}
+
+function broadcastQueuedJobs() {
+  const jobs = queueManager.getQueuedJobs();
+  broadcastToTeachers({ type: "queue_jobs", jobs: jobs.map(j => ({
+    id: j.id,
+    email: j.email,
+    provider: j.provider,
+    model: j.model,
+    status: j.status,
+    queuePosition: j.queuePosition,
+    currentScenario: j.currentScenario,
+    totalScenarios: j.scenarios.length,
+    createdAt: j.createdAt,
+    startedAt: j.startedAt,
+  })) });
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
   await initializeDefaults();
+  
+  queueManager.initialize();
+  
+  const template = await getCachedTemplate();
+  queueManager.setPromptTemplate(template);
+  
+  queueManager.setEventHandlers({
+    onJobQueued: async (job) => {
+      studentRateLimits.set(job.email, Date.now());
+      createLog({
+        type: "request",
+        provider: job.provider as "openai" | "anthropic",
+        email: job.email,
+        model: job.model,
+        message: `Job queued for ${job.email} (position #${job.queuePosition})`,
+        details: { jobId: job.id, queuePosition: job.queuePosition }
+      });
+      broadcastQueueStats(queueManager.getStats());
+      broadcastQueuedJobs();
+      broadcastToStudent(job.email, { type: "job_queued", job: { id: job.id, queuePosition: job.queuePosition } });
+    },
+    onJobStarted: async (job) => {
+      markInFlight(job.email);
+      createLog({
+        type: "request",
+        provider: job.provider as "openai" | "anthropic",
+        email: job.email,
+        model: job.model,
+        message: `Job started for ${job.email} (${job.scenarios.length} scenarios)`,
+        details: { jobId: job.id }
+      });
+      await storage.setStudentRunningTest(job.email, true);
+      await broadcastStudentUpdate();
+      broadcastQueueStats(queueManager.getStats());
+      broadcastQueuedJobs();
+      broadcastToStudent(job.email, { type: "job_started", job: { id: job.id, totalScenarios: job.scenarios.length } });
+    },
+    onJobProgress: (job, current, total) => {
+      broadcastQueuedJobs();
+      broadcastToStudent(job.email, { type: "job_progress", job: { id: job.id, current, total } });
+    },
+    onJobCompleted: async (job) => {
+      const score = job.results?.filter(r => r.isCorrect).length || 0;
+      createLog({
+        type: "response",
+        provider: job.provider as "openai" | "anthropic",
+        email: job.email,
+        model: job.model,
+        message: `Job completed for ${job.email} - Score: ${score}/${job.scenarios.length}`,
+        details: { jobId: job.id, score, total: job.scenarios.length }
+      });
+      
+      clearInFlight(job.email);
+      await storage.setStudentRunningTest(job.email, false);
+      await storage.updateStudentScore(job.email, score);
+      
+      const student = await storage.getOrCreateStudent(job.email);
+      const versions = await storage.getPromptVersions(student.id);
+      const existingVersion = versions.find(v => v.text === job.moderationInstructions.trim());
+      
+      if (!existingVersion) {
+        const newVersionNumber = versions.length + 1;
+        await storage.savePromptVersion(student.id, newVersionNumber, job.moderationInstructions.trim(), score);
+        await storage.incrementPromptCount(job.email);
+      }
+      
+      await broadcastStudentUpdate();
+      broadcastQueueStats(queueManager.getStats());
+      broadcastQueuedJobs();
+      
+      broadcastToStudent(job.email, { 
+        type: "job_completed", 
+        results: job.results,
+      });
+    },
+    onJobFailed: async (job, error) => {
+      logApiError(job.provider as "openai" | "anthropic" | "system", job.email, `Job failed for ${job.email}: ${error}`, { message: error });
+      clearInFlight(job.email);
+      await storage.setStudentRunningTest(job.email, false);
+      await broadcastStudentUpdate();
+      broadcastQueueStats(queueManager.getStats());
+      broadcastQueuedJobs();
+      broadcastToStudent(job.email, { type: "job_failed", error });
+    },
+    onJobCancelled: async (job) => {
+      createLog({
+        type: "request",
+        provider: "system",
+        email: job.email,
+        message: `Job cancelled for ${job.email} (by teacher)`,
+        details: { jobId: job.id }
+      });
+      await broadcastStudentUpdate();
+      broadcastQueueStats(queueManager.getStats());
+      broadcastQueuedJobs();
+      broadcastToStudent(job.email, { type: "job_cancelled", message: "Your test was cancelled by the teacher." });
+    },
+    onQueueStatsUpdated: (stats) => {
+      broadcastQueueStats(stats);
+    },
+  });
   
   wss = new WebSocketServer({ server: httpServer, path: "/ws" });
   
@@ -284,6 +425,31 @@ export async function registerRoutes(
           const prStudents = await storage.getAllPRStudents();
           ws.send(JSON.stringify({ type: "pr_students_update", prStudents }));
           ws.send(JSON.stringify({ type: "api_logs_initial", logs: apiLogs }));
+          ws.send(JSON.stringify({ type: "queue_stats", stats: queueManager.getStats() }));
+          const jobs = queueManager.getQueuedJobs();
+          ws.send(JSON.stringify({ type: "queue_jobs", jobs: jobs.map(j => ({
+            id: j.id,
+            email: j.email,
+            provider: j.provider,
+            model: j.model,
+            status: j.status,
+            queuePosition: j.queuePosition,
+            currentScenario: j.currentScenario,
+            totalScenarios: j.scenarios.length,
+            createdAt: j.createdAt,
+            startedAt: j.startedAt,
+          })) }));
+        }
+        
+        if (data.type === "student_subscribe" && data.email) {
+          studentClients.set(data.email.toLowerCase(), ws);
+          const existingJob = queueManager.getJobByEmail(data.email.toLowerCase());
+          if (existingJob) {
+            ws.send(JSON.stringify({ 
+              type: existingJob.status === "processing" ? "job_started" : "job_queued",
+              job: { id: existingJob.id, queuePosition: existingJob.queuePosition }
+            }));
+          }
         }
       } catch (e) {
         console.error("WebSocket message error:", e);
@@ -292,10 +458,22 @@ export async function registerRoutes(
     
     ws.on("close", () => {
       teacherClients.delete(ws);
+      for (const [email, client] of studentClients) {
+        if (client === ws) {
+          studentClients.delete(email);
+          break;
+        }
+      }
     });
     
     ws.on("error", () => {
       teacherClients.delete(ws);
+      for (const [email, client] of studentClients) {
+        if (client === ws) {
+          studentClients.delete(email);
+          break;
+        }
+      }
     });
   });
 
@@ -303,6 +481,12 @@ export async function registerRoutes(
     wss.clients.forEach((ws) => {
       if ((ws as any).isAlive === false) {
         teacherClients.delete(ws);
+        for (const [email, client] of studentClients) {
+          if (client === ws) {
+            studentClients.delete(email);
+            break;
+          }
+        }
         return ws.terminate();
       }
       (ws as any).isAlive = false;
@@ -671,34 +855,16 @@ export async function registerRoutes(
 
       const emailLower = email?.toLowerCase().trim();
       
-      if (emailLower && moderationInstructions.trim().toLowerCase() !== "test") {
-        const rateCheck = checkRateLimit(emailLower);
-        if (!rateCheck.allowed) {
-          return res.status(429).json({ error: rateCheck.reason });
-        }
-        markInFlight(emailLower);
-      }
-
-      let student = null;
-      if (emailLower) {
-        student = await storage.getOrCreateStudent(emailLower);
-        await storage.setStudentRunningTest(emailLower, true);
-        await broadcastStudentUpdate();
+      if (!emailLower) {
+        return res.status(400).json({ error: "Email is required" });
       }
 
       const isLocked = await storage.isAppLocked();
       if (isLocked && moderationInstructions.trim().toLowerCase() !== "test") {
-        if (student && emailLower) {
-          await storage.setStudentRunningTest(emailLower, false);
-          clearInFlight(emailLower);
-          await broadcastStudentUpdate();
-        }
         return res.status(403).json({ error: "The app is currently locked by the teacher. Please wait until it's unlocked to run tests." });
       }
 
       const scenarios = await getCachedScenarios();
-      const promptTemplate = await getCachedTemplate();
-      const fullPrompt = promptTemplate.replace("{{STUDENT_PROMPT}}", moderationInstructions);
 
       if (moderationInstructions.trim().toLowerCase() === "test") {
         const dummyLabels = ["✅ Allowed", "🚫 Prohibited", "⚠️ Disturbing"];
@@ -718,13 +884,6 @@ export async function registerRoutes(
         });
 
         const correctCount = dummyResults.filter(r => r.isCorrect).length;
-
-        if (student && email) {
-          const emailLower = email.toLowerCase().trim();
-          await storage.setStudentRunningTest(emailLower, false);
-          await broadcastStudentUpdate();
-        }
-
         return res.json({
           results: dummyResults,
           score: correctCount,
@@ -732,267 +891,158 @@ export async function registerRoutes(
         });
       }
 
-      const isAnthropicModel = model.startsWith("claude");
-      
-      if (isAnthropicModel) {
-        const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-        if (!anthropicApiKey) {
-          if (emailLower) clearInFlight(emailLower);
-          return res.status(500).json({ error: "Anthropic API key not configured" });
+      if (studentEnqueueLocks.has(emailLower)) {
+        return res.status(429).json({ error: "Please wait, your test is being queued." });
+      }
+
+      studentEnqueueLocks.add(emailLower);
+      try {
+        const rateCheck = checkRateLimit(emailLower);
+        if (!rateCheck.allowed) {
+          return res.status(429).json({ error: rateCheck.reason });
         }
 
-        const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+        await storage.getOrCreateStudent(emailLower);
 
-        createLog({
-          type: "request",
-          provider: "anthropic",
-          email: emailLower,
+        const template = await getCachedTemplate();
+        queueManager.setPromptTemplate(template);
+
+        const result = queueManager.enqueue(
+          emailLower,
           model,
-          message: `Starting test run for ${emailLower || "anonymous"} with ${scenarios.length} scenarios`,
-          details: { model, scenarioCount: scenarios.length }
-        });
-
-        const results = await Promise.all(
-          scenarios.map(async (scenario) => {
-            const startTime = Date.now();
-            try {
-              const imageBase64 = getImageBase64(scenario.image);
-              logApiRequest("anthropic", emailLower, model, scenario.id);
-              
-              const response = await retryWithBackoff(() => anthropic.messages.create({
-                model: model,
-                max_tokens: 50,
-                messages: [
-                  {
-                    role: "user",
-                    content: [
-                      {
-                        type: "image",
-                        source: {
-                          type: "base64",
-                          media_type: "image/png",
-                          data: imageBase64,
-                        },
-                      },
-                      {
-                        type: "text",
-                        text: fullPrompt
-                      }
-                    ]
-                  }
-                ],
-              }));
-
-              const aiLabel = (response.content[0] as any)?.text?.trim() || "Unknown";
-              const durationMs = Date.now() - startTime;
-              logApiResponse("anthropic", emailLower, model, scenario.id, aiLabel, durationMs);
-              
-              const normalizedAiLabel = aiLabel.includes("Allowed") ? "Allowed" 
-                : aiLabel.includes("Prohibited") ? "Prohibited"
-                : aiLabel.includes("Disturbing") ? "Disturbing"
-                : "Unknown";
-
-              return {
-                id: scenario.id,
-                text: scenario.text,
-                expected: scenario.expected,
-                aiLabel: aiLabel,
-                normalizedLabel: normalizedAiLabel,
-                isCorrect: normalizedAiLabel === scenario.expected,
-              };
-            } catch (error) {
-              logApiError("anthropic", emailLower, `Error processing scenario #${scenario.id}`, error);
-              return {
-                id: scenario.id,
-                text: scenario.text,
-                expected: scenario.expected,
-                aiLabel: "Error",
-                normalizedLabel: "Error",
-                isCorrect: false,
-              };
-            }
-          })
+          moderationInstructions,
+          scenarios.map(s => ({
+            id: s.id,
+            text: s.text,
+            expected: s.expected,
+            image: s.image,
+          }))
         );
 
-        const correctCount = results.filter(r => r.isCorrect).length;
-
-        if (student && emailLower) {
-          await storage.setStudentRunningTest(emailLower, false);
-          await storage.updateStudentScore(emailLower, correctCount);
-          
-          const versions = await storage.getPromptVersions(student.id);
-          const existingVersion = versions.find(v => v.text === moderationInstructions.trim());
-          
-          if (!existingVersion) {
-            const newVersionNumber = versions.length + 1;
-            await storage.savePromptVersion(student.id, newVersionNumber, moderationInstructions.trim(), correctCount);
-            await storage.incrementPromptCount(emailLower);
-          }
-          
-          await broadcastStudentUpdate();
-          clearInFlight(emailLower);
+        if ("error" in result) {
+          return res.status(429).json({ error: result.error });
         }
-        
-        return res.json({
-          results,
-          score: correctCount,
-          total: scenarios.length,
+
+        res.status(202).json({
+          queued: true,
+          jobId: result.id,
+          queuePosition: result.queuePosition,
+          message: result.queuePosition === 1 
+            ? "Your test is starting now..." 
+            : `Your test is queued. Position: #${result.queuePosition}`,
         });
+      } finally {
+        studentEnqueueLocks.delete(emailLower);
       }
+    } catch (error: any) {
+      logApiError("system", req.body.email?.toLowerCase(), `Failed to queue test`, error);
+      res.status(500).json({ error: "Failed to queue test. Please try again." });
+    }
+  });
 
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) {
-        if (emailLower) clearInFlight(emailLower);
-        return res.status(500).json({ error: "OpenAI API key not configured" });
-      }
+  app.get("/api/queue/status", async (_req, res) => {
+    res.json(queueManager.getStats());
+  });
 
-      const openai = new OpenAI({ apiKey });
+  app.get("/api/queue/jobs", async (_req, res) => {
+    const jobs = queueManager.getQueuedJobs();
+    res.json(jobs.map(j => ({
+      id: j.id,
+      email: j.email,
+      provider: j.provider,
+      model: j.model,
+      status: j.status,
+      queuePosition: j.queuePosition,
+      currentScenario: j.currentScenario,
+      totalScenarios: j.scenarios.length,
+      createdAt: j.createdAt,
+      startedAt: j.startedAt,
+    })));
+  });
 
+  app.post("/api/queue/pause", async (req, res) => {
+    const { provider } = req.body;
+    if (provider) {
+      queueManager.pauseProvider(provider);
       createLog({
         type: "request",
-        provider: "openai",
-        email: emailLower,
-        model,
-        message: `Starting test run for ${emailLower || "anonymous"} with ${scenarios.length} scenarios`,
-        details: { model, scenarioCount: scenarios.length }
+        provider: provider as "openai" | "anthropic",
+        message: `Queue paused for ${provider}`,
+        details: {}
       });
-
-      const results = await Promise.all(
-        scenarios.map(async (scenario) => {
-          const startTime = Date.now();
-          try {
-            const imageBase64 = getImageBase64(scenario.image);
-            logApiRequest("openai", emailLower, model, scenario.id);
-            
-            const response = await retryWithBackoff(() => openai.chat.completions.create({
-              model: model,
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "text",
-                      text: fullPrompt
-                    },
-                    {
-                      type: "image_url",
-                      image_url: {
-                        url: `data:image/png;base64,${imageBase64}`,
-                        detail: "low"
-                      }
-                    }
-                  ]
-                }
-              ],
-              max_tokens: 20,
-              temperature: 0,
-            }));
-
-            const aiLabel = response.choices[0]?.message?.content?.trim() || "Unknown";
-            const durationMs = Date.now() - startTime;
-            logApiResponse("openai", emailLower, model, scenario.id, aiLabel, durationMs);
-            
-            const normalizedAiLabel = aiLabel.includes("Allowed") ? "Allowed" 
-              : aiLabel.includes("Prohibited") ? "Prohibited"
-              : aiLabel.includes("Disturbing") ? "Disturbing"
-              : "Unknown";
-
-            return {
-              id: scenario.id,
-              text: scenario.text,
-              expected: scenario.expected,
-              aiLabel: aiLabel,
-              normalizedLabel: normalizedAiLabel,
-              isCorrect: normalizedAiLabel === scenario.expected,
-            };
-          } catch (error) {
-            logApiError("openai", emailLower, `Error processing scenario #${scenario.id}`, error);
-            return {
-              id: scenario.id,
-              text: scenario.text,
-              expected: scenario.expected,
-              aiLabel: "Error",
-              normalizedLabel: "Error",
-              isCorrect: false,
-            };
-          }
-        })
-      );
-
-      const correctCount = results.filter(r => r.isCorrect).length;
-
-      if (student && emailLower) {
-        await storage.setStudentRunningTest(emailLower, false);
-        await storage.updateStudentScore(emailLower, correctCount);
-        
-        const versions = await storage.getPromptVersions(student.id);
-        const existingVersion = versions.find(v => v.text === moderationInstructions.trim());
-        
-        if (!existingVersion) {
-          const newVersionNumber = versions.length + 1;
-          await storage.savePromptVersion(student.id, newVersionNumber, moderationInstructions.trim(), correctCount);
-          await storage.incrementPromptCount(emailLower);
-        }
-        
-        await broadcastStudentUpdate();
-        clearInFlight(emailLower);
-      }
-      
-      res.json({
-        results,
-        score: correctCount,
-        total: scenarios.length,
+    } else {
+      queueManager.pauseAll();
+      createLog({
+        type: "request",
+        provider: "system",
+        message: "All queues paused",
+        details: {}
       });
-    } catch (error: any) {
-      const { email, model } = req.body;
-      const emailLower = email?.toLowerCase().trim();
-      
-      logApiError("system", emailLower, `Test run failed for ${emailLower || "anonymous"}`, error);
-      
-      if (emailLower) {
-        clearInFlight(emailLower);
-        await storage.setStudentRunningTest(emailLower, false);
-        await broadcastStudentUpdate();
-      }
-      
-      // Check for insufficient credits/quota errors
-      const errorMessage = error?.message?.toLowerCase() || "";
-      const errorType = error?.error?.type || error?.type || "";
-      const errorCode = error?.code || error?.error?.code || "";
-      
-      // Anthropic insufficient balance
-      if (errorType === "insufficient_balance_error" || 
-          errorMessage.includes("credit balance is too low") ||
-          errorMessage.includes("insufficient_balance")) {
-        return res.status(402).json({ 
-          error: "Out of API Credits",
-          details: "The Anthropic API credits have run out. Please ask your teacher to add more credits to the Anthropic account, or try using the OpenAI model instead."
-        });
-      }
-      
-      // OpenAI insufficient quota
-      if (errorCode === "insufficient_quota" || 
-          errorMessage.includes("exceeded your current quota") ||
-          errorMessage.includes("insufficient_quota") ||
-          errorMessage.includes("billing")) {
-        return res.status(402).json({ 
-          error: "Out of API Credits",
-          details: "The OpenAI API credits have run out. Please ask your teacher to add more credits to the OpenAI account, or try using the Claude model instead."
-        });
-      }
-      
-      // Rate limit errors
-      if (errorCode === "rate_limit_exceeded" || 
-          errorType === "rate_limit_error" ||
-          errorMessage.includes("rate limit")) {
-        return res.status(429).json({ 
-          error: "Too Many Requests",
-          details: "The API is receiving too many requests. Please wait a moment and try again."
-        });
-      }
-      
-      res.status(500).json({ error: "Failed to run test. Please try again." });
     }
+    res.json({ success: true, stats: queueManager.getStats() });
+  });
+
+  app.post("/api/queue/resume", async (req, res) => {
+    const { provider } = req.body;
+    if (provider) {
+      queueManager.resumeProvider(provider);
+      createLog({
+        type: "request",
+        provider: provider as "openai" | "anthropic",
+        message: `Queue resumed for ${provider}`,
+        details: {}
+      });
+    } else {
+      queueManager.resumeAll();
+      createLog({
+        type: "request",
+        provider: "system",
+        message: "All queues resumed",
+        details: {}
+      });
+    }
+    res.json({ success: true, stats: queueManager.getStats() });
+  });
+
+  app.post("/api/queue/cancel/:jobId", async (req, res) => {
+    const { jobId } = req.params;
+    const success = queueManager.cancelJob(jobId);
+    if (success) {
+      createLog({
+        type: "request",
+        provider: "system",
+        message: `Job ${jobId} cancelled`,
+        details: { jobId }
+      });
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Job not found or already processing" });
+    }
+  });
+
+  app.post("/api/queue/clear-completed", async (_req, res) => {
+    queueManager.clearCompletedJobs();
+    res.json({ success: true });
+  });
+
+  app.get("/api/job/:jobId", async (req, res) => {
+    const job = queueManager.getJob(req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+    res.json({
+      id: job.id,
+      status: job.status,
+      queuePosition: job.queuePosition,
+      currentScenario: job.currentScenario,
+      totalScenarios: job.scenarios.length,
+      results: job.status === "completed" ? {
+        results: job.results,
+        score: job.results?.filter(r => r.isCorrect).length || 0,
+        total: job.scenarios.length,
+      } : undefined,
+      error: job.error,
+    });
   });
 
   app.post("/api/prompt-doctor", async (req, res) => {
