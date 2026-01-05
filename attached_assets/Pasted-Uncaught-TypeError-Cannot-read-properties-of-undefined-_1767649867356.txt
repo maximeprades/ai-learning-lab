@@ -1,0 +1,93 @@
+Uncaught TypeError: Cannot read properties of undefined (reading 'paused')
+    at TeacherDashboard (TeacherDashboard.tsx:729:30)
+    at renderWithHooks (chunk-NUMECXU6.js?v=95b87f87:11548:26)
+    at updateFunctionComponent (chunk-NUMECXU6.js?v=95b87f87:14582:28)
+    at beginWork (chunk-NUMECXU6.js?v=95b87f87:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-NUMECXU6.js?v=95b87f87:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-NUMECXU6.js?v=95b87f87:3699:24)
+    at invokeGuardedCallback (chunk-NUMECXU6.js?v=95b87f87:3733:39)
+    at beginWork$1 (chunk-NUMECXU6.js?v=95b87f87:19765:15)
+    at performUnitOfWork (chunk-NUMECXU6.js?v=95b87f87:19198:20)
+    at workLoopSync (chunk-NUMECXU6.js?v=95b87f87:19137:13)
+TeacherDashboard @ TeacherDashboard.tsx:729
+renderWithHooks @ chunk-NUMECXU6.js?v=95b87f87:11548
+updateFunctionComponent @ chunk-NUMECXU6.js?v=95b87f87:14582
+beginWork @ chunk-NUMECXU6.js?v=95b87f87:15924
+callCallback2 @ chunk-NUMECXU6.js?v=95b87f87:3674
+invokeGuardedCallbackDev @ chunk-NUMECXU6.js?v=95b87f87:3699
+invokeGuardedCallback @ chunk-NUMECXU6.js?v=95b87f87:3733
+beginWork$1 @ chunk-NUMECXU6.js?v=95b87f87:19765
+performUnitOfWork @ chunk-NUMECXU6.js?v=95b87f87:19198
+workLoopSync @ chunk-NUMECXU6.js?v=95b87f87:19137
+renderRootSync @ chunk-NUMECXU6.js?v=95b87f87:19116
+performConcurrentWorkOnRoot @ chunk-NUMECXU6.js?v=95b87f87:18678
+workLoop @ chunk-NUMECXU6.js?v=95b87f87:197
+flushWork @ chunk-NUMECXU6.js?v=95b87f87:176
+performWorkUntilDeadline @ chunk-NUMECXU6.js?v=95b87f87:384
+TeacherDashboard.tsx:729 Uncaught TypeError: Cannot read properties of undefined (reading 'paused')
+    at TeacherDashboard (TeacherDashboard.tsx:729:30)
+    at renderWithHooks (chunk-NUMECXU6.js?v=95b87f87:11548:26)
+    at updateFunctionComponent (chunk-NUMECXU6.js?v=95b87f87:14582:28)
+    at beginWork (chunk-NUMECXU6.js?v=95b87f87:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-NUMECXU6.js?v=95b87f87:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-NUMECXU6.js?v=95b87f87:3699:24)
+    at invokeGuardedCallback (chunk-NUMECXU6.js?v=95b87f87:3733:39)
+    at beginWork$1 (chunk-NUMECXU6.js?v=95b87f87:19765:15)
+    at performUnitOfWork (chunk-NUMECXU6.js?v=95b87f87:19198:20)
+    at workLoopSync (chunk-NUMECXU6.js?v=95b87f87:19137:13)
+TeacherDashboard @ TeacherDashboard.tsx:729
+renderWithHooks @ chunk-NUMECXU6.js?v=95b87f87:11548
+updateFunctionComponent @ chunk-NUMECXU6.js?v=95b87f87:14582
+beginWork @ chunk-NUMECXU6.js?v=95b87f87:15924
+callCallback2 @ chunk-NUMECXU6.js?v=95b87f87:3674
+invokeGuardedCallbackDev @ chunk-NUMECXU6.js?v=95b87f87:3699
+invokeGuardedCallback @ chunk-NUMECXU6.js?v=95b87f87:3733
+beginWork$1 @ chunk-NUMECXU6.js?v=95b87f87:19765
+performUnitOfWork @ chunk-NUMECXU6.js?v=95b87f87:19198
+workLoopSync @ chunk-NUMECXU6.js?v=95b87f87:19137
+renderRootSync @ chunk-NUMECXU6.js?v=95b87f87:19116
+recoverFromConcurrentError @ chunk-NUMECXU6.js?v=95b87f87:18736
+performConcurrentWorkOnRoot @ chunk-NUMECXU6.js?v=95b87f87:18684
+workLoop @ chunk-NUMECXU6.js?v=95b87f87:197
+flushWork @ chunk-NUMECXU6.js?v=95b87f87:176
+performWorkUntilDeadline @ chunk-NUMECXU6.js?v=95b87f87:384
+injected.js:37 The above error occurred in the <TeacherDashboard> component:
+
+    at TeacherDashboard (https://828c3fc4-4a53-42f1-bf70-f4fec67ffaf8-00-2qoxrkhjs98zb.picard.replit.dev/src/pages/TeacherDashboard.tsx?v=GTap88-80Onylwh_dVpD4:39:49)
+    at Route (https://828c3fc4-4a53-42f1-bf70-f4fec67ffaf8-00-2qoxrkhjs98zb.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=95b87f87:323:16)
+    at Switch (https://828c3fc4-4a53-42f1-bf70-f4fec67ffaf8-00-2qoxrkhjs98zb.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=95b87f87:379:17)
+    at RootApp
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+logCapturedError @ chunk-NUMECXU6.js?v=95b87f87:14032
+update.callback @ chunk-NUMECXU6.js?v=95b87f87:14052
+callCallback @ chunk-NUMECXU6.js?v=95b87f87:11248
+commitUpdateQueue @ chunk-NUMECXU6.js?v=95b87f87:11265
+commitLayoutEffectOnFiber @ chunk-NUMECXU6.js?v=95b87f87:17093
+commitLayoutMountEffects_complete @ chunk-NUMECXU6.js?v=95b87f87:17980
+commitLayoutEffects_begin @ chunk-NUMECXU6.js?v=95b87f87:17969
+commitLayoutEffects @ chunk-NUMECXU6.js?v=95b87f87:17920
+commitRootImpl @ chunk-NUMECXU6.js?v=95b87f87:19353
+commitRoot @ chunk-NUMECXU6.js?v=95b87f87:19277
+finishConcurrentRender @ chunk-NUMECXU6.js?v=95b87f87:18760
+performConcurrentWorkOnRoot @ chunk-NUMECXU6.js?v=95b87f87:18718
+workLoop @ chunk-NUMECXU6.js?v=95b87f87:197
+flushWork @ chunk-NUMECXU6.js?v=95b87f87:176
+performWorkUntilDeadline @ chunk-NUMECXU6.js?v=95b87f87:384
+chunk-NUMECXU6.js?v=95b87f87:19413 Uncaught TypeError: Cannot read properties of undefined (reading 'paused')
+    at TeacherDashboard (TeacherDashboard.tsx:729:30)
+    at renderWithHooks (chunk-NUMECXU6.js?v=95b87f87:11548:26)
+    at updateFunctionComponent (chunk-NUMECXU6.js?v=95b87f87:14582:28)
+    at beginWork (chunk-NUMECXU6.js?v=95b87f87:15924:22)
+    at beginWork$1 (chunk-NUMECXU6.js?v=95b87f87:19753:22)
+    at performUnitOfWork (chunk-NUMECXU6.js?v=95b87f87:19198:20)
+    at workLoopSync (chunk-NUMECXU6.js?v=95b87f87:19137:13)
+    at renderRootSync (chunk-NUMECXU6.js?v=95b87f87:19116:15)
+    at recoverFromConcurrentError (chunk-NUMECXU6.js?v=95b87f87:18736:28)
+    at performConcurrentWorkOnRoot (chunk-NUMECXU6.js?v=95b87f87:18684:30)

@@ -726,7 +726,7 @@ export default function TeacherDashboard() {
                 Queue Manager
               </div>
               <div className="flex items-center gap-2">
-                {queueStats?.openai.paused && queueStats?.anthropic.paused ? (
+                {queueStats?.openai?.paused && queueStats?.anthropic?.paused ? (
                   <Button size="sm" variant="outline" onClick={() => resumeQueue()} className="bg-green-100 text-green-700 hover:bg-green-200">
                     <Play className="w-4 h-4 mr-1" /> Resume All
                   </Button>
@@ -743,7 +743,7 @@ export default function TeacherDashboard() {
               <div className="p-3 bg-white rounded-lg border">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-semibold text-emerald-700">OpenAI</span>
-                  {queueStats?.openai.paused ? (
+                  {queueStats?.openai?.paused ? (
                     <Button size="sm" variant="ghost" onClick={() => resumeQueue("openai")} className="h-7 text-xs text-green-600">
                       <Play className="w-3 h-3 mr-1" /> Resume
                     </Button>
@@ -756,16 +756,16 @@ export default function TeacherDashboard() {
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Pending:</span>
-                    <span className="font-medium">{queueStats?.openai.pending || 0}</span>
+                    <span className="font-medium">{queueStats?.openai?.pending || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Processing:</span>
-                    <span className="font-medium">{queueStats?.openai.processing || 0}</span>
+                    <span className="font-medium">{queueStats?.openai?.processing || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Status:</span>
-                    <span className={`font-medium ${queueStats?.openai.paused ? "text-red-600" : "text-green-600"}`}>
-                      {queueStats?.openai.paused ? "Paused" : "Active"}
+                    <span className={`font-medium ${queueStats?.openai?.paused ? "text-red-600" : "text-green-600"}`}>
+                      {queueStats?.openai?.paused ? "Paused" : "Active"}
                     </span>
                   </div>
                 </div>
@@ -774,7 +774,7 @@ export default function TeacherDashboard() {
               <div className="p-3 bg-white rounded-lg border">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-semibold text-orange-700">Anthropic</span>
-                  {queueStats?.anthropic.paused ? (
+                  {queueStats?.anthropic?.paused ? (
                     <Button size="sm" variant="ghost" onClick={() => resumeQueue("anthropic")} className="h-7 text-xs text-green-600">
                       <Play className="w-3 h-3 mr-1" /> Resume
                     </Button>
@@ -787,16 +787,16 @@ export default function TeacherDashboard() {
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Pending:</span>
-                    <span className="font-medium">{queueStats?.anthropic.pending || 0}</span>
+                    <span className="font-medium">{queueStats?.anthropic?.pending || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Processing:</span>
-                    <span className="font-medium">{queueStats?.anthropic.processing || 0}</span>
+                    <span className="font-medium">{queueStats?.anthropic?.processing || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Status:</span>
-                    <span className={`font-medium ${queueStats?.anthropic.paused ? "text-red-600" : "text-green-600"}`}>
-                      {queueStats?.anthropic.paused ? "Paused" : "Active"}
+                    <span className={`font-medium ${queueStats?.anthropic?.paused ? "text-red-600" : "text-green-600"}`}>
+                      {queueStats?.anthropic?.paused ? "Paused" : "Active"}
                     </span>
                   </div>
                 </div>
