@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft, Target } from "lucide-react";
+import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft, Target, ScrollText, AlertCircle, CheckCircle2, Send } from "lucide-react";
 
 interface Student {
   id: number;
@@ -29,6 +29,18 @@ interface Scenario {
   text: string;
   expected: string;
   image: string;
+}
+
+interface ApiLog {
+  id: string;
+  timestamp: string;
+  type: "request" | "response" | "error";
+  provider: "openai" | "anthropic" | "system";
+  email?: string;
+  model?: string;
+  scenarioId?: number;
+  message: string;
+  details?: any;
 }
 
 function formatTime(dateString: string | null) {
@@ -69,6 +81,10 @@ export default function TeacherDashboard() {
   const [scenarioSaving, setScenarioSaving] = useState(false);
   
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string; type: "prompt101" | "pr" } | null>(null);
+  
+  const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
+  const [showLogs, setShowLogs] = useState(true);
+  const logsEndRef = useRef<HTMLDivElement>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +156,10 @@ export default function TeacherDashboard() {
             setStudents(data.students);
           } else if (data.type === "pr_students_update") {
             setPRStudents(data.prStudents);
+          } else if (data.type === "api_logs_initial") {
+            setApiLogs(data.logs);
+          } else if (data.type === "api_log") {
+            setApiLogs(prev => [data.log, ...prev].slice(0, 200));
           }
         } catch (e) {
           console.error("WebSocket message error:", e);
@@ -634,6 +654,98 @@ export default function TeacherDashboard() {
               </div>
             )}
           </CardContent>
+        </Card>
+
+        <Card className="border-2 border-slate-200 bg-slate-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-800">
+                <ScrollText className="w-5 h-5" />
+                API Logs ({apiLogs.length})
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setApiLogs([])}
+                  className="text-xs"
+                >
+                  Clear Logs
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowLogs(!showLogs)}
+                  className="text-xs"
+                >
+                  {showLogs ? "Hide" : "Show"}
+                </Button>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          {showLogs && (
+            <CardContent>
+              {apiLogs.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No API logs yet. Logs will appear when students run tests.</p>
+              ) : (
+                <div className="max-h-96 overflow-y-auto space-y-2 font-mono text-xs">
+                  {apiLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className={`p-2 rounded border ${
+                        log.type === "error" 
+                          ? "bg-red-50 border-red-200" 
+                          : log.type === "response" 
+                            ? "bg-green-50 border-green-200" 
+                            : "bg-blue-50 border-blue-200"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {log.type === "error" && <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />}
+                        {log.type === "response" && <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />}
+                        {log.type === "request" && <Send className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-gray-500">
+                              {new Date(log.timestamp).toLocaleTimeString()}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${
+                              log.provider === "openai" 
+                                ? "bg-emerald-100 text-emerald-700" 
+                                : log.provider === "anthropic" 
+                                  ? "bg-orange-100 text-orange-700" 
+                                  : "bg-gray-100 text-gray-700"
+                            }`}>
+                              {log.provider}
+                            </span>
+                            {log.email && (
+                              <span className="text-gray-600 truncate max-w-[150px]" title={log.email}>
+                                {log.email}
+                              </span>
+                            )}
+                          </div>
+                          <p className={`mt-1 ${log.type === "error" ? "text-red-700" : "text-gray-800"}`}>
+                            {log.message}
+                          </p>
+                          {log.type === "error" && log.details && (
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-red-600 hover:text-red-800">
+                                Error Details
+                              </summary>
+                              <pre className="mt-1 p-2 bg-red-100 rounded text-[10px] overflow-x-auto whitespace-pre-wrap">
+                                {JSON.stringify(log.details, null, 2)}
+                              </pre>
+                            </details>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={logsEndRef} />
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
       </main>
 

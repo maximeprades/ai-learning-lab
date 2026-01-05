@@ -14,6 +14,76 @@ const studentRateLimits = new Map<string, number>();
 const studentInFlight = new Set<string>();
 const RATE_LIMIT_MS = 5000;
 
+interface ApiLog {
+  id: string;
+  timestamp: string;
+  type: "request" | "response" | "error";
+  provider: "openai" | "anthropic" | "system";
+  email?: string;
+  model?: string;
+  scenarioId?: number;
+  message: string;
+  details?: any;
+}
+
+const apiLogs: ApiLog[] = [];
+const MAX_LOGS = 200;
+
+function createLog(log: Omit<ApiLog, "id" | "timestamp">): ApiLog {
+  const entry: ApiLog = {
+    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    timestamp: new Date().toISOString(),
+    ...log
+  };
+  apiLogs.unshift(entry);
+  if (apiLogs.length > MAX_LOGS) {
+    apiLogs.pop();
+  }
+  broadcastToTeachers({ type: "api_log", log: entry });
+  console.log(`[API ${log.type.toUpperCase()}] [${log.provider}] ${log.message}`, log.details || "");
+  return entry;
+}
+
+function logApiRequest(provider: "openai" | "anthropic", email: string | undefined, model: string, scenarioId: number) {
+  createLog({
+    type: "request",
+    provider,
+    email,
+    model,
+    scenarioId,
+    message: `Sending request for scenario #${scenarioId}`,
+    details: { model, email }
+  });
+}
+
+function logApiResponse(provider: "openai" | "anthropic", email: string | undefined, model: string, scenarioId: number, response: string, durationMs: number) {
+  createLog({
+    type: "response",
+    provider,
+    email,
+    model,
+    scenarioId,
+    message: `Received response for scenario #${scenarioId} in ${durationMs}ms: "${response}"`,
+    details: { response, durationMs }
+  });
+}
+
+function logApiError(provider: "openai" | "anthropic" | "system", email: string | undefined, message: string, error: any) {
+  createLog({
+    type: "error",
+    provider,
+    email,
+    message,
+    details: {
+      errorMessage: error?.message || String(error),
+      errorCode: error?.code || error?.error?.code,
+      errorType: error?.type || error?.error?.type,
+      status: error?.status,
+      stack: error?.stack?.split("\n").slice(0, 5)
+    }
+  });
+}
+
 let scenariosCache: any[] | null = null;
 let templateCache: string | null = null;
 let cacheTimestamp = 0;
@@ -213,6 +283,7 @@ export async function registerRoutes(
           ws.send(JSON.stringify({ type: "students_update", students }));
           const prStudents = await storage.getAllPRStudents();
           ws.send(JSON.stringify({ type: "pr_students_update", prStudents }));
+          ws.send(JSON.stringify({ type: "api_logs_initial", logs: apiLogs }));
         }
       } catch (e) {
         console.error("WebSocket message error:", e);
@@ -672,10 +743,21 @@ export async function registerRoutes(
 
         const anthropic = new Anthropic({ apiKey: anthropicApiKey });
 
+        createLog({
+          type: "request",
+          provider: "anthropic",
+          email: emailLower,
+          model,
+          message: `Starting test run for ${emailLower || "anonymous"} with ${scenarios.length} scenarios`,
+          details: { model, scenarioCount: scenarios.length }
+        });
+
         const results = await Promise.all(
           scenarios.map(async (scenario) => {
+            const startTime = Date.now();
             try {
               const imageBase64 = getImageBase64(scenario.image);
+              logApiRequest("anthropic", emailLower, model, scenario.id);
               
               const response = await retryWithBackoff(() => anthropic.messages.create({
                 model: model,
@@ -702,6 +784,8 @@ export async function registerRoutes(
               }));
 
               const aiLabel = (response.content[0] as any)?.text?.trim() || "Unknown";
+              const durationMs = Date.now() - startTime;
+              logApiResponse("anthropic", emailLower, model, scenario.id, aiLabel, durationMs);
               
               const normalizedAiLabel = aiLabel.includes("Allowed") ? "Allowed" 
                 : aiLabel.includes("Prohibited") ? "Prohibited"
@@ -717,7 +801,7 @@ export async function registerRoutes(
                 isCorrect: normalizedAiLabel === scenario.expected,
               };
             } catch (error) {
-              console.error(`Error processing scenario ${scenario.id}:`, error);
+              logApiError("anthropic", emailLower, `Error processing scenario #${scenario.id}`, error);
               return {
                 id: scenario.id,
                 text: scenario.text,
@@ -764,10 +848,21 @@ export async function registerRoutes(
 
       const openai = new OpenAI({ apiKey });
 
+      createLog({
+        type: "request",
+        provider: "openai",
+        email: emailLower,
+        model,
+        message: `Starting test run for ${emailLower || "anonymous"} with ${scenarios.length} scenarios`,
+        details: { model, scenarioCount: scenarios.length }
+      });
+
       const results = await Promise.all(
         scenarios.map(async (scenario) => {
+          const startTime = Date.now();
           try {
             const imageBase64 = getImageBase64(scenario.image);
+            logApiRequest("openai", emailLower, model, scenario.id);
             
             const response = await retryWithBackoff(() => openai.chat.completions.create({
               model: model,
@@ -794,6 +889,8 @@ export async function registerRoutes(
             }));
 
             const aiLabel = response.choices[0]?.message?.content?.trim() || "Unknown";
+            const durationMs = Date.now() - startTime;
+            logApiResponse("openai", emailLower, model, scenario.id, aiLabel, durationMs);
             
             const normalizedAiLabel = aiLabel.includes("Allowed") ? "Allowed" 
               : aiLabel.includes("Prohibited") ? "Prohibited"
@@ -809,7 +906,7 @@ export async function registerRoutes(
               isCorrect: normalizedAiLabel === scenario.expected,
             };
           } catch (error) {
-            console.error(`Error processing scenario ${scenario.id}:`, error);
+            logApiError("openai", emailLower, `Error processing scenario #${scenario.id}`, error);
             return {
               id: scenario.id,
               text: scenario.text,
@@ -847,14 +944,14 @@ export async function registerRoutes(
         total: scenarios.length,
       });
     } catch (error: any) {
-      console.error("Error running test:", error);
-      if (req.body.email) {
-        clearInFlight(req.body.email.toLowerCase().trim());
-      }
+      const { email, model } = req.body;
+      const emailLower = email?.toLowerCase().trim();
       
-      const { email } = req.body;
-      if (email) {
-        await storage.setStudentRunningTest(email.toLowerCase().trim(), false);
+      logApiError("system", emailLower, `Test run failed for ${emailLower || "anonymous"}`, error);
+      
+      if (emailLower) {
+        clearInFlight(emailLower);
+        await storage.setStudentRunningTest(emailLower, false);
         await broadcastStudentUpdate();
       }
       
