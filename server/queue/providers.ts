@@ -17,17 +17,20 @@ function normalizeLabel(aiLabel: string): string {
   return "Unknown";
 }
 
+// Buffer added on top of base rate limits for safety margin
+const RATE_LIMIT_BUFFER_MS = 250;
+
 export const defaultProviderConfigs: Record<string, ProviderConfig> = {
   openai: {
     name: "openai",
     maxConcurrent: 2,
-    cooldownMs: 500,
+    cooldownMs: 500 + RATE_LIMIT_BUFFER_MS,
     isEnabled: true,
   },
   anthropic: {
     name: "anthropic",
     maxConcurrent: 1,
-    cooldownMs: 1000,
+    cooldownMs: 1000 + RATE_LIMIT_BUFFER_MS,
     isEnabled: true,
   },
 };
