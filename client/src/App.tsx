@@ -204,7 +204,7 @@ function App() {
         id: s.id,
         text: s.text,
         expected: s.expected,
-        image: `/scenarios/${s.image}`
+        image: s.imageData || `/scenarios/${s.image}`
       }))))
       .catch(console.error);
   }, []);

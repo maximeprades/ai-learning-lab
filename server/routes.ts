@@ -262,7 +262,8 @@ async function getActiveScenarios() {
       id: s.id,
       text: s.text,
       expected: s.expected,
-      image: s.imagePath
+      image: s.imagePath,
+      imageData: s.imageData
     }));
   }
   return defaultScenarios;
@@ -500,7 +501,7 @@ export async function registerRoutes(
 
   app.get("/api/scenarios", async (_req, res) => {
     const scenarios = await getActiveScenarios();
-    res.json(scenarios.map(s => ({ id: s.id, text: s.text, image: s.image, expected: s.expected })));
+    res.json(scenarios.map(s => ({ id: s.id, text: s.text, image: s.image, imageData: s.imageData, expected: s.expected })));
   });
 
   app.get("/api/leaderboard", async (_req, res) => {
@@ -788,10 +789,13 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Expected must be Allowed, Prohibited, or Disturbing" });
       }
       
+      const imageBuffer = fs.readFileSync(file.path);
+      const base64Image = `data:${file.mimetype};base64,${imageBuffer.toString("base64")}`;
+      
       const existingScenarios = await storage.getScenarios();
       const sortOrder = existingScenarios.length + 1;
       
-      const scenario = await storage.createScenario(text, expected, file.filename, sortOrder);
+      const scenario = await storage.createScenario(text, expected, file.filename, sortOrder, base64Image);
       invalidateCache();
       res.json(scenario);
     } catch (error) {
@@ -815,7 +819,7 @@ export async function registerRoutes(
       const { text, expected } = req.body;
       const file = req.file;
       
-      const updates: Partial<{ text: string; expected: string; imagePath: string }> = {};
+      const updates: Partial<{ text: string; expected: string; imagePath: string; imageData: string }> = {};
       
       if (text) updates.text = text;
       if (expected) {
@@ -827,9 +831,12 @@ export async function registerRoutes(
       if (file) {
         const oldImagePath = path.join(process.cwd(), "client", "public", "scenarios", existing.imagePath);
         if (fs.existsSync(oldImagePath) && !existing.imagePath.match(/^\d+-/)) {
-          fs.unlinkSync(oldImagePath);
+          try { fs.unlinkSync(oldImagePath); } catch {}
         }
+        const imageBuffer = fs.readFileSync(file.path);
+        const base64Image = `data:${file.mimetype};base64,${imageBuffer.toString("base64")}`;
         updates.imagePath = file.filename;
+        updates.imageData = base64Image;
       }
       
       const scenario = await storage.updateScenario(scenarioId, updates);

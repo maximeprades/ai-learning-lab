@@ -176,7 +176,7 @@ export default function TeacherDashboard() {
           id: s.id,
           text: s.text,
           expected: s.expected,
-          image: `/scenarios/${s.image}`
+          image: s.imageData || `/scenarios/${s.image}`
         }))))
         .catch(console.error);
     }
@@ -370,7 +370,7 @@ export default function TeacherDashboard() {
           const updated = await response.json();
           setScenarios(scenarios.map(s => 
             s.id === editingScenario.id 
-              ? { ...s, text: updated.text, expected: updated.expected, image: `/scenarios/${updated.image}` }
+              ? { ...s, text: updated.text, expected: updated.expected, image: updated.imageData || `/scenarios/${updated.image}` }
               : s
           ));
           setEditingScenario(null);
@@ -392,7 +392,7 @@ export default function TeacherDashboard() {
             id: newScenario.id,
             text: newScenario.text,
             expected: newScenario.expected,
-            image: `/scenarios/${newScenario.image}`
+            image: newScenario.imageData || `/scenarios/${newScenario.image}`
           }]);
           setNewScenarioDialog(false);
           setScenarioForm({ text: "", expected: "Allowed" });

@@ -45,6 +45,7 @@ export const scenarios = pgTable("scenarios", {
   text: text("text").notNull(),
   expected: text("expected").notNull(),
   imagePath: text("image_path").notNull(),
+  imageData: text("image_data"),
   sortOrder: integer("sort_order").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

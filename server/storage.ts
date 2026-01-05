@@ -208,14 +208,14 @@ export class DatabaseStorage implements IStorage {
     return scenario;
   }
 
-  async createScenario(text: string, expected: string, imagePath: string, sortOrder: number): Promise<Scenario> {
+  async createScenario(text: string, expected: string, imagePath: string, sortOrder: number, imageData?: string): Promise<Scenario> {
     const [scenario] = await db.insert(scenarios)
-      .values({ text, expected, imagePath, sortOrder })
+      .values({ text, expected, imagePath, sortOrder, imageData })
       .returning();
     return scenario;
   }
 
-  async updateScenario(id: number, updates: Partial<{ text: string; expected: string; imagePath: string; sortOrder: number }>): Promise<Scenario | undefined> {
+  async updateScenario(id: number, updates: Partial<{ text: string; expected: string; imagePath: string; sortOrder: number; imageData: string }>): Promise<Scenario | undefined> {
     const [scenario] = await db.update(scenarios)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(scenarios.id, id))
