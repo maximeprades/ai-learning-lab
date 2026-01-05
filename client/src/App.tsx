@@ -105,7 +105,7 @@ function App() {
           setQueuePosition(null);
           setJobProgress({ current: 0, total: data.job?.totalScenarios || 10 });
         } else if (data.type === "job_progress") {
-          setJobProgress({ current: data.job?.currentScenario || 0, total: data.job?.totalScenarios || 10 });
+          setJobProgress({ current: data.job?.current || 0, total: data.job?.total || 10 });
         } else if (data.type === "job_completed") {
           setQueuePosition(null);
           setJobProgress(null);
