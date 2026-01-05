@@ -1066,6 +1066,40 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/student/cancel-test", async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    
+    const emailLower = email.toLowerCase().trim();
+    const job = queueManager.getJobByEmail(emailLower);
+    
+    if (!job) {
+      return res.status(404).json({ error: "No queued test found" });
+    }
+    
+    if (job.status !== "queued") {
+      return res.status(400).json({ error: "Test is already processing and cannot be cancelled" });
+    }
+    
+    const success = queueManager.cancelJob(job.id);
+    if (success) {
+      clearInFlight(emailLower);
+      await storage.setStudentRunningTest(emailLower, false);
+      createLog({
+        type: "request",
+        provider: "system",
+        email: emailLower,
+        message: `Test cancelled by student ${emailLower}`,
+        details: { jobId: job.id }
+      });
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Failed to cancel test" });
+    }
+  });
+
   app.post("/api/queue/clear-completed", async (_req, res) => {
     queueManager.clearCompletedJobs();
     res.json({ success: true });

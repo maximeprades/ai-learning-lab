@@ -354,6 +354,30 @@ function App() {
     }
   };
 
+  const cancelQueuedTest = async () => {
+    if (!email) return;
+    
+    try {
+      const response = await fetch("/api/student/cancel-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      
+      if (response.ok) {
+        setIsLoading(false);
+        setQueuePosition(null);
+        setJobProgress(null);
+        setCurrentJobId(null);
+      } else {
+        const data = await response.json();
+        setError(data.error || "Failed to cancel test");
+      }
+    } catch (err) {
+      setError("Failed to cancel test");
+    }
+  };
+
   const getLabelEmoji = (label: string) => {
     if (label.includes("Allowed")) return "✅";
     if (label.includes("Prohibited")) return "🚫";
@@ -666,6 +690,15 @@ function App() {
                       </div>
                       <span className="text-sm text-gray-600">Other students are testing ahead of you</span>
                       <span className="text-xs text-gray-500">Your test will start automatically...</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={cancelQueuedTest}
+                        className="mt-2 text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Cancel Test
+                      </Button>
                     </>
                   ) : jobProgress ? (
                     <>
