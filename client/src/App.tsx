@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import Confetti from "react-confetti";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<{ email: string; score: number | null; promptCount: number; hasAttempted: boolean }[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   
   const [promptDoctorEnabled, setPromptDoctorEnabled] = useState(false);
   const [promptDoctorFeedback, setPromptDoctorFeedback] = useState<{ glow: string; grow: string; rank: string } | null>(null);
@@ -166,6 +168,20 @@ function App() {
                     setSelectedVersion(loginData.versions[loginData.versions.length - 1].id);
                   }
                 }
+              }
+              
+              // Check if student is now #1 on leaderboard
+              try {
+                const leaderboardResponse = await fetch("/api/leaderboard");
+                if (leaderboardResponse.ok) {
+                  const leaderboard = await leaderboardResponse.json();
+                  if (leaderboard.length > 0 && leaderboard[0].email.toLowerCase() === email.toLowerCase()) {
+                    setShowConfetti(true);
+                    setTimeout(() => setShowConfetti(false), 5000);
+                  }
+                }
+              } catch (e) {
+                console.error("Failed to check leaderboard:", e);
               }
             }
           }
@@ -443,6 +459,15 @@ function App() {
 
   return (
     <>
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}
+          numberOfPieces={500}
+          gravity={0.3}
+        />
+      )}
       {!bypassMobile && (
         <div className="md:hidden min-h-screen bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center p-8">
           <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-xl">
