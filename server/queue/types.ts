@@ -22,6 +22,7 @@ export interface ScenarioInput {
   text: string;
   expected: string;
   image: string;
+  imageData?: string;
 }
 
 export interface ScenarioResult {

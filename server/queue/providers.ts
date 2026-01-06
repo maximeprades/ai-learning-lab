@@ -4,7 +4,14 @@ import fs from "fs";
 import path from "path";
 import { ProviderProcessor, ProviderConfig, ScenarioInput } from "./types";
 
-function getImageBase64(imageName: string): string {
+function getImageBase64(imageName: string, imageData?: string): string {
+  if (imageData) {
+    const base64Match = imageData.match(/^data:image\/[^;]+;base64,(.+)$/);
+    if (base64Match) {
+      return base64Match[1];
+    }
+    return imageData;
+  }
   const imagePath = path.join(process.cwd(), "client", "public", "scenarios", imageName);
   const imageBuffer = fs.readFileSync(imagePath);
   return imageBuffer.toString("base64");
@@ -45,7 +52,7 @@ export function createOpenAIProcessor(): ProviderProcessor {
   return {
     name: "openai",
     processScenario: async (scenario: ScenarioInput, prompt: string, model: string) => {
-      const imageBase64 = getImageBase64(scenario.image);
+      const imageBase64 = getImageBase64(scenario.image, scenario.imageData);
       
       const response = await openai.chat.completions.create({
         model: model,
@@ -87,7 +94,7 @@ export function createAnthropicProcessor(): ProviderProcessor {
   return {
     name: "anthropic",
     processScenario: async (scenario: ScenarioInput, prompt: string, model: string) => {
-      const imageBase64 = getImageBase64(scenario.image);
+      const imageBase64 = getImageBase64(scenario.image, scenario.imageData);
       
       const response = await anthropic.messages.create({
         model: model,

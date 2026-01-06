@@ -962,6 +962,7 @@ export async function registerRoutes(
             text: s.text,
             expected: s.expected,
             image: s.image,
+            imageData: s.imageData,
           }))
         );
 
