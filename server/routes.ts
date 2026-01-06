@@ -645,6 +645,10 @@ export async function registerRoutes(
 
   app.delete("/api/teacher/pr-students", async (_req, res) => {
     try {
+      const students = await storage.getAllPRStudents();
+      for (const student of students) {
+        await storage.deleteLogsByEmail(student.email);
+      }
       await storage.deleteAllPRStudents();
       await broadcastPRStudentUpdate();
       res.json({ success: true });
@@ -753,6 +757,10 @@ export async function registerRoutes(
 
   app.delete("/api/teacher/students", async (_req, res) => {
     try {
+      const students = await storage.getAllStudents();
+      for (const student of students) {
+        await storage.deleteLogsByEmail(student.email);
+      }
       await storage.deleteAllStudents();
       await broadcastStudentUpdate();
       res.json({ success: true });

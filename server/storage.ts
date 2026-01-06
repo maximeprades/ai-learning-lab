@@ -375,6 +375,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(apiLogs).where(eq(apiLogs.email, email));
   }
 
+  async deleteAllLogs(): Promise<void> {
+    await db.delete(apiLogs);
+  }
+
   async pruneOldLogs(): Promise<void> {
     const [countResult] = await db.select({ count: sql<number>`count(*)` }).from(apiLogs);
     const total = Number(countResult.count);
