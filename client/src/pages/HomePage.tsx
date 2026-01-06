@@ -8,7 +8,7 @@ export default function HomePage() {
           <img 
             src="/logo.png" 
             alt="All Saints Day School" 
-            className="w-32 h-32 mx-auto mb-6 object-contain"
+            className="w-44 h-44 mx-auto mb-6 object-contain transition-all duration-500 hover:scale-110 hover:rotate-[360deg] cursor-pointer"
           />
           <h1 className="text-4xl md:text-5xl font-semibold text-[#1e3a5f] mb-3 tracking-tight">
             AI Learning Lab
