@@ -11,6 +11,16 @@ import { queueManager, QueueJob, QueueStats } from "./queue";
 import { db } from "./db";
 import { precisionRecallStudents } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { 
+  validateRequest, 
+  runTestSchema, 
+  generatePrdSchema, 
+  verifyTeacherSchema,
+  promptTemplateSchema,
+  toggleLockSchema,
+  cancelTestSchema,
+  promptDoctorSchema
+} from "./validation";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
@@ -659,8 +669,12 @@ export async function registerRoutes(
   });
 
   app.post("/api/verify-teacher", (req, res) => {
-    const { password } = req.body;
-    if (password === TEACHER_PASSWORD) {
+    const validation = validateRequest(verifyTeacherSchema, req.body);
+    if (!validation.success) {
+      return res.status(400).json({ success: false, error: validation.error });
+    }
+    
+    if (validation.data.password === TEACHER_PASSWORD) {
       res.json({ success: true });
     } else {
       res.status(401).json({ success: false, error: "Invalid password" });
@@ -782,7 +796,7 @@ export async function registerRoutes(
 
   app.post("/api/teacher/toggle-lock", async (req, res) => {
     try {
-      const { locked } = req.body;
+      const locked = req.body.locked === true || req.body.locked === "true";
       await storage.setAppLocked(locked);
       res.json({ success: true, isLocked: locked });
     } catch (error) {
@@ -1134,12 +1148,12 @@ export async function registerRoutes(
   });
 
   app.post("/api/student/cancel-test", async (req, res) => {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: "Email is required" });
+    const validation = validateRequest(cancelTestSchema, req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error });
     }
     
-    const emailLower = email.toLowerCase().trim();
+    const emailLower = validation.data.email;
     const job = queueManager.getJobByEmail(emailLower);
     
     if (!job) {
