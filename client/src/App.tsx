@@ -467,16 +467,70 @@ function App() {
   return (
     <>
       {showConfetti && (
-        <Confetti
-          width={window.innerWidth}
-          height={window.innerHeight}
-          recycle={true}
-          numberOfPieces={800}
-          gravity={0.15}
-          wind={0.01}
-          colors={['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE']}
-          tweenDuration={100}
-        />
+        <>
+          <Confetti
+            width={window.innerWidth}
+            height={window.innerHeight}
+            recycle={true}
+            numberOfPieces={800}
+            gravity={0.15}
+            wind={0.01}
+            colors={['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE']}
+            tweenDuration={100}
+          />
+          <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="firework"
+                style={{
+                  left: `${10 + (i % 6) * 15}%`,
+                  animationDelay: `${(i * 0.8) % 3}s`,
+                }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes firework-rise {
+              0% { transform: translateY(100vh) scale(0); opacity: 1; }
+              50% { opacity: 1; }
+              100% { transform: translateY(20vh) scale(1); opacity: 0; }
+            }
+            @keyframes firework-burst {
+              0%, 50% { box-shadow: none; }
+              60% {
+                box-shadow:
+                  0 -80px 0 -3px #ff0,
+                  56px -56px 0 -3px #f0f,
+                  80px 0 0 -3px #0ff,
+                  56px 56px 0 -3px #f00,
+                  0 80px 0 -3px #0f0,
+                  -56px 56px 0 -3px #ff0,
+                  -80px 0 0 -3px #f0f,
+                  -56px -56px 0 -3px #0ff;
+              }
+              100% {
+                box-shadow:
+                  0 -160px 0 -3px transparent,
+                  112px -112px 0 -3px transparent,
+                  160px 0 0 -3px transparent,
+                  112px 112px 0 -3px transparent,
+                  0 160px 0 -3px transparent,
+                  -112px 112px 0 -3px transparent,
+                  -160px 0 0 -3px transparent,
+                  -112px -112px 0 -3px transparent;
+              }
+            }
+            .firework {
+              position: absolute;
+              width: 6px;
+              height: 6px;
+              border-radius: 50%;
+              background: #fff;
+              animation: firework-rise 2s ease-out infinite, firework-burst 2s ease-out infinite;
+            }
+          `}</style>
+        </>
       )}
       {!bypassMobile && (
         <div className="md:hidden min-h-screen bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center p-8">
@@ -538,7 +592,7 @@ function App() {
               }}
               className="flex items-center gap-2 bg-amber-500 text-white border-amber-400 hover:bg-amber-600"
             >
-              Test Confetti
+              Test
             </Button>
           </div>
         </div>
