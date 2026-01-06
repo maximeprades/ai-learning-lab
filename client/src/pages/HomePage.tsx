@@ -2,20 +2,25 @@ import { PawPrint, Target, FileText, Shield, ArrowRight, UserPlus } from "lucide
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-stone-50 flex items-center justify-center p-8">
+    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 flex items-center justify-center p-8">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-semibold text-gray-800 mb-3 tracking-tight">
+          <img 
+            src="/logo.png" 
+            alt="All Saints Day School" 
+            className="w-32 h-32 mx-auto mb-6 object-contain"
+          />
+          <h1 className="text-4xl md:text-5xl font-semibold text-[#1e3a5f] mb-3 tracking-tight">
             AI Learning Lab
           </h1>
-          <p className="text-lg text-gray-500 font-light">
+          <p className="text-lg text-slate-500 font-light">
             Choose your adventure
           </p>
         </div>
 
         <div className="flex justify-center mb-8">
           <a href="/register" className="group">
-            <div className="flex items-center gap-3 px-6 py-3 rounded-full border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 transition-all duration-300 hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-3 px-6 py-3 rounded-full border-2 border-[#1e3a5f]/20 bg-gradient-to-r from-[#1e3a5f]/5 to-[#1e3a5f]/10 text-[#1e3a5f] transition-all duration-300 hover:border-[#1e3a5f]/40 hover:shadow-md hover:-translate-y-0.5">
               <UserPlus className="w-5 h-5" />
               <span className="font-medium">Register for Class</span>
               <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
@@ -81,7 +86,7 @@ export default function HomePage() {
 
         <div className="flex justify-center">
           <a href="/teacher" className="group">
-            <div className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-200 bg-white text-gray-600 transition-all duration-300 hover:border-gray-300 hover:shadow-sm hover:text-gray-800">
+            <div className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#1e3a5f]/20 bg-white text-[#1e3a5f]/70 transition-all duration-300 hover:border-[#1e3a5f]/40 hover:shadow-sm hover:text-[#1e3a5f]">
               <Shield className="w-4 h-4" />
               <span className="text-sm font-medium">Teacher Dashboard</span>
             </div>
