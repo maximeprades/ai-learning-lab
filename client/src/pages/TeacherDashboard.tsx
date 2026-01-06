@@ -55,15 +55,37 @@ function formatTime(dateString: string | null) {
   return date.toLocaleDateString();
 }
 
-const TEACHER_AUTH_KEY = "ailab.teacher_auth";
+const TEACHER_TOKEN_KEY = "ailab.teacher_token";
 
 export default function TeacherDashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem(TEACHER_AUTH_KEY) === "true";
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem(TEACHER_TOKEN_KEY);
+    if (token) {
+      fetch("/api/verify-session", {
+        method: "POST",
+        headers: { "x-teacher-token": token },
+      })
+        .then(res => {
+          if (res.ok) {
+            setIsAuthenticated(true);
+          } else {
+            localStorage.removeItem(TEACHER_TOKEN_KEY);
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem(TEACHER_TOKEN_KEY);
+        })
+        .finally(() => setIsVerifying(false));
+    } else {
+      setIsVerifying(false);
+    }
+  }, []);
   
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
@@ -141,7 +163,10 @@ export default function TeacherDashboard() {
       });
 
       if (response.ok) {
-        localStorage.setItem(TEACHER_AUTH_KEY, "true");
+        const data = await response.json();
+        if (data.token) {
+          localStorage.setItem(TEACHER_TOKEN_KEY, data.token);
+        }
         setIsAuthenticated(true);
         setPassword("");
         setPasswordError("");
@@ -153,6 +178,29 @@ export default function TeacherDashboard() {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const handleLogout = () => {
+    const token = localStorage.getItem(TEACHER_TOKEN_KEY);
+    if (token) {
+      fetch("/api/teacher/logout", {
+        method: "POST",
+        headers: { "x-teacher-token": token },
+      }).catch(console.error);
+    }
+    localStorage.removeItem(TEACHER_TOKEN_KEY);
+    setIsAuthenticated(false);
+  };
+
+  const teacherFetch = (url: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem(TEACHER_TOKEN_KEY);
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        ...(token ? { "x-teacher-token": token } : {}),
+      },
+    });
   };
 
   useEffect(() => {
@@ -281,7 +329,7 @@ export default function TeacherDashboard() {
     setTemplateSaving(true);
     setTemplateError("");
     try {
-      const response = await fetch("/api/teacher/prompt-template", {
+      const response = await teacherFetch("/api/teacher/prompt-template", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ template: promptTemplate }),
@@ -307,7 +355,7 @@ export default function TeacherDashboard() {
       const endpoint = type === "pr" 
         ? `/api/teacher/pr-students/${id}` 
         : `/api/teacher/students/${id}`;
-      const response = await fetch(endpoint, {
+      const response = await teacherFetch(endpoint, {
         method: "DELETE",
       });
       
@@ -324,7 +372,7 @@ export default function TeacherDashboard() {
 
   const handleDeleteAllStudents = async () => {
     try {
-      const response = await fetch("/api/teacher/students", {
+      const response = await teacherFetch("/api/teacher/students", {
         method: "DELETE",
       });
       if (response.ok) {
@@ -337,7 +385,7 @@ export default function TeacherDashboard() {
 
   const handleDeleteAllPRStudents = async () => {
     try {
-      const response = await fetch("/api/teacher/pr-students", {
+      const response = await teacherFetch("/api/teacher/pr-students", {
         method: "DELETE",
       });
       if (response.ok) {
@@ -361,7 +409,7 @@ export default function TeacherDashboard() {
       }
       
       if (editingScenario) {
-        const response = await fetch(`/api/teacher/scenarios/${editingScenario.id}`, {
+        const response = await teacherFetch(`/api/teacher/scenarios/${editingScenario.id}`, {
           method: "PUT",
           body: formData,
         });
@@ -381,7 +429,7 @@ export default function TeacherDashboard() {
           return;
         }
         
-        const response = await fetch("/api/teacher/scenarios", {
+        const response = await teacherFetch("/api/teacher/scenarios", {
           method: "POST",
           body: formData,
         });
@@ -408,7 +456,7 @@ export default function TeacherDashboard() {
 
   const handleDeleteScenario = async (id: number) => {
     try {
-      const response = await fetch(`/api/teacher/scenarios/${id}`, {
+      const response = await teacherFetch(`/api/teacher/scenarios/${id}`, {
         method: "DELETE",
       });
       
@@ -419,6 +467,18 @@ export default function TeacherDashboard() {
       console.error("Failed to delete scenario:", error);
     }
   };
+
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-violet-900 flex items-center justify-center p-8">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -476,12 +536,18 @@ export default function TeacherDashboard() {
               Teacher Dashboard
             </h1>
           </div>
-          <a href="/">
-            <Button variant="outline" className="bg-white/20 text-white border-white/40 hover:bg-white/30">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+          <div className="flex gap-2">
+            <a href="/">
+              <Button variant="outline" className="bg-white/20 text-white border-white/40 hover:bg-white/30">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </a>
+            <Button variant="outline" className="bg-white/20 text-white border-white/40 hover:bg-white/30" onClick={handleLogout}>
+              <Lock className="w-4 h-4 mr-2" />
+              Logout
             </Button>
-          </a>
+          </div>
         </div>
       </header>
 

@@ -67,7 +67,7 @@ export const scenarioSchema = z.object({
   description: z.string()
     .min(1, "Description is required")
     .max(1000, "Description too long"),
-  expectedDecision: z.enum(["Allow", "Block"]),
+  expectedDecision: z.enum(["Allowed", "Prohibited", "Disturbing"]),
   isActive: z.union([z.boolean(), z.string().transform(val => val === "true")]).optional(),
 });
 

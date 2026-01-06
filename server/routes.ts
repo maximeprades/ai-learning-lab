@@ -1,9 +1,10 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
 import { storage } from "./storage";
@@ -23,6 +24,45 @@ import {
 } from "./validation";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
+
+const teacherSessions = new Map<string, { createdAt: number; expiresAt: number }>();
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+
+function generateSessionToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function isValidTeacherSession(token: string | undefined): boolean {
+  if (!token) return false;
+  const session = teacherSessions.get(token);
+  if (!session) return false;
+  if (Date.now() > session.expiresAt) {
+    teacherSessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
+function cleanupExpiredSessions() {
+  const now = Date.now();
+  const tokens = Array.from(teacherSessions.keys());
+  for (const token of tokens) {
+    const session = teacherSessions.get(token);
+    if (session && now > session.expiresAt) {
+      teacherSessions.delete(token);
+    }
+  }
+}
+
+setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
+
+function requireTeacherAuth(req: Request, res: Response, next: NextFunction) {
+  const token = req.headers["x-teacher-token"] as string;
+  if (!isValidTeacherSession(token)) {
+    return res.status(401).json({ error: "Unauthorized - teacher authentication required" });
+  }
+  next();
+}
 
 const studentRateLimits = new Map<string, number>();
 const studentInFlight = new Set<string>();
@@ -633,7 +673,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/teacher/pr-students/:id", async (req, res) => {
+  app.delete("/api/teacher/pr-students/:id", requireTeacherAuth, async (req, res) => {
     try {
       const studentId = parseInt(req.params.id);
       if (isNaN(studentId)) {
@@ -653,7 +693,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/teacher/pr-students", async (_req, res) => {
+  app.delete("/api/teacher/pr-students", requireTeacherAuth, async (_req, res) => {
     try {
       const students = await storage.getAllPRStudents();
       for (const student of students) {
@@ -675,10 +715,33 @@ export async function registerRoutes(
     }
     
     if (validation.data.password === TEACHER_PASSWORD) {
-      res.json({ success: true });
+      const token = generateSessionToken();
+      const now = Date.now();
+      teacherSessions.set(token, {
+        createdAt: now,
+        expiresAt: now + SESSION_DURATION_MS
+      });
+      res.json({ success: true, token });
     } else {
       res.status(401).json({ success: false, error: "Invalid password" });
     }
+  });
+
+  app.post("/api/verify-session", (req, res) => {
+    const token = req.headers["x-teacher-token"] as string;
+    if (isValidTeacherSession(token)) {
+      res.json({ valid: true });
+    } else {
+      res.status(401).json({ valid: false });
+    }
+  });
+
+  app.post("/api/teacher/logout", (req, res) => {
+    const token = req.headers["x-teacher-token"] as string;
+    if (token) {
+      teacherSessions.delete(token);
+    }
+    res.json({ success: true });
   });
 
   app.post("/api/register-student", async (req, res) => {
@@ -746,7 +809,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/teacher/students/:id", async (req, res) => {
+  app.delete("/api/teacher/students/:id", requireTeacherAuth, async (req, res) => {
     try {
       const studentId = parseInt(req.params.id);
       if (isNaN(studentId)) {
@@ -769,7 +832,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/teacher/students", async (_req, res) => {
+  app.delete("/api/teacher/students", requireTeacherAuth, async (_req, res) => {
     try {
       const students = await storage.getAllStudents();
       for (const student of students) {
@@ -845,7 +908,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/teacher/prompt-template", async (req, res) => {
+  app.put("/api/teacher/prompt-template", requireTeacherAuth, async (req, res) => {
     try {
       const { template } = req.body;
       if (!template || typeof template !== "string") {
@@ -873,7 +936,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/teacher/scenarios", scenarioUpload.single("image"), async (req, res) => {
+  app.post("/api/teacher/scenarios", requireTeacherAuth, scenarioUpload.single("image"), async (req, res) => {
     try {
       const { text, expected } = req.body;
       const file = req.file;
@@ -901,7 +964,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/teacher/scenarios/:id", scenarioUpload.single("image"), async (req, res) => {
+  app.put("/api/teacher/scenarios/:id", requireTeacherAuth, scenarioUpload.single("image"), async (req, res) => {
     try {
       const scenarioId = parseInt(req.params.id);
       if (isNaN(scenarioId)) {
@@ -945,7 +1008,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/teacher/scenarios/:id", async (req, res) => {
+  app.delete("/api/teacher/scenarios/:id", requireTeacherAuth, async (req, res) => {
     try {
       const scenarioId = parseInt(req.params.id);
       if (isNaN(scenarioId)) {

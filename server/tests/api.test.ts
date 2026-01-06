@@ -219,7 +219,7 @@ describe("Validation Schemas", () => {
     it("accepts valid scenario", () => {
       const result = scenarioSchema.safeParse({
         description: "A cute puppy playing",
-        expectedDecision: "Allow"
+        expectedDecision: "Allowed"
       });
       expect(result.success).toBe(true);
     });
@@ -235,7 +235,7 @@ describe("Validation Schemas", () => {
     it("handles string boolean for isActive", () => {
       const result = scenarioSchema.safeParse({
         description: "A scenario",
-        expectedDecision: "Block",
+        expectedDecision: "Prohibited",
         isActive: "true"
       });
       expect(result.success).toBe(true);
