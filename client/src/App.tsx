@@ -530,6 +530,16 @@ function App() {
               <Trophy className="w-4 h-4" />
               <span className="hidden sm:inline">Leaderboard</span>
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 10000);
+              }}
+              className="flex items-center gap-2 bg-amber-500 text-white border-amber-400 hover:bg-amber-600"
+            >
+              Test Confetti
+            </Button>
           </div>
         </div>
       </header>
