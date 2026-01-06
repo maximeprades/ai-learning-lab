@@ -1297,27 +1297,31 @@ Respond in exactly this JSON format:
 
   const prdRateLimits = new Map<string, { count: number; date: string }>();
   const PRD_DAILY_LIMIT = 5;
+  const prdConcurrentLimit = 3;
+  let prdActiveRequests = 0;
 
-  function getPrdRateLimit(ip: string): { count: number; allowed: boolean } {
+  function getPrdRateLimit(email: string): { count: number; allowed: boolean } {
     const today = new Date().toDateString();
-    const data = prdRateLimits.get(ip);
+    const key = email.toLowerCase().trim();
+    const data = prdRateLimits.get(key);
     
     if (!data || data.date !== today) {
-      prdRateLimits.set(ip, { count: 0, date: today });
+      prdRateLimits.set(key, { count: 0, date: today });
       return { count: 0, allowed: true };
     }
     
     return { count: data.count, allowed: data.count < PRD_DAILY_LIMIT };
   }
 
-  function incrementPrdCount(ip: string) {
+  function incrementPrdCount(email: string) {
     const today = new Date().toDateString();
-    const data = prdRateLimits.get(ip);
+    const key = email.toLowerCase().trim();
+    const data = prdRateLimits.get(key);
     
     if (!data || data.date !== today) {
-      prdRateLimits.set(ip, { count: 1, date: today });
+      prdRateLimits.set(key, { count: 1, date: today });
     } else {
-      prdRateLimits.set(ip, { count: data.count + 1, date: today });
+      prdRateLimits.set(key, { count: data.count + 1, date: today });
     }
   }
 
@@ -1404,13 +1408,25 @@ IMPORTANT GUIDELINES:
         });
       }
 
-      const clientIp = req.ip || req.socket.remoteAddress || "unknown";
-      const { count, allowed } = getPrdRateLimit(clientIp);
+      const { email } = req.body;
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "Please enter your email address" });
+      }
+      
+      const emailLower = email.toLowerCase().trim();
+      const { count, allowed } = getPrdRateLimit(emailLower);
       
       if (!allowed) {
         return res.status(429).json({ 
           error: `You've generated ${PRD_DAILY_LIMIT} PRDs today. Try again tomorrow!`,
           remaining: 0
+        });
+      }
+      
+      if (prdActiveRequests >= prdConcurrentLimit) {
+        return res.status(429).json({ 
+          error: "The system is busy. Please wait a moment and try again.",
+          remaining: PRD_DAILY_LIMIT - count
         });
       }
       
@@ -1465,28 +1481,33 @@ Please generate a detailed, Replit-optimized PRD for this app idea.`;
 
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
       
-      const response = await retryWithBackoff(() => 
-        anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4000,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }]
-        })
-      );
+      prdActiveRequests++;
+      try {
+        const response = await retryWithBackoff(() => 
+          anthropic.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 4000,
+            system: systemPrompt,
+            messages: [{ role: "user", content: userMessage }]
+          })
+        );
 
-      const textContent = response.content.find(c => c.type === "text");
-      const prd = textContent ? textContent.text : "";
-      
-      if (!prd) {
-        return res.status(500).json({ error: "Failed to generate PRD. Please try again." });
+        const textContent = response.content.find(c => c.type === "text");
+        const prd = textContent ? textContent.text : "";
+        
+        if (!prd) {
+          return res.status(500).json({ error: "Failed to generate PRD. Please try again." });
+        }
+
+        incrementPrdCount(emailLower);
+        
+        res.json({ 
+          prd,
+          remaining: PRD_DAILY_LIMIT - count - 1
+        });
+      } finally {
+        prdActiveRequests--;
       }
-
-      incrementPrdCount(clientIp);
-      
-      res.json({ 
-        prd,
-        remaining: PRD_DAILY_LIMIT - count - 1
-      });
       
     } catch (error: any) {
       console.error("PRD Generation error:", error);

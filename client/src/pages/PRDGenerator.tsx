@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -50,7 +51,8 @@ interface OptionalRequirement {
 export default function PRDGenerator() {
   const [step, setStep] = useState<"input" | "loading" | "result">("input");
   const [idea, setIdea] = useState("");
-      const [optionalReqs, setOptionalReqs] = useState<OptionalRequirement[]>([
+  const [email, setEmail] = useState(() => localStorage.getItem("prd_email") || "");
+  const [optionalReqs, setOptionalReqs] = useState<OptionalRequirement[]>([
     { id: "auth", label: "User accounts needed", checked: false },
     { id: "mobile", label: "Mobile-first design", checked: false },
     { id: "realtime", label: "Real-time features", checked: false },
@@ -105,10 +107,11 @@ export default function PRDGenerator() {
   const charCount = idea.length;
   const isTestMode = idea.trim().toLowerCase() === "test";
   const isValidLength = isTestMode || (charCount >= MIN_CHARS && charCount <= MAX_CHARS);
+  const isValidEmail = email.includes("@") && email.trim().length > 0;
   const isRateLimited = generationCount >= DAILY_LIMIT;
 
   const handleGenerate = async () => {
-    if (!isValidLength || isRateLimited) return;
+    if (!isValidLength || isRateLimited || !isValidEmail) return;
 
     setStep("loading");
     setError("");
@@ -124,12 +127,15 @@ export default function PRDGenerator() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60000);
 
+      localStorage.setItem("prd_email", email);
+      
       const response = await fetch("/api/generate-prd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userInput: idea,
-          optionalRequirements: selectedReqs
+          optionalRequirements: selectedReqs,
+          email: email.trim()
         }),
         signal: controller.signal
       });
@@ -437,6 +443,22 @@ export default function PRDGenerator() {
               </p>
             )}
 
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your email
+              </label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.email@school.edu"
+                className="max-w-sm"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Used to track your daily limit (5 PRDs per day)
+              </p>
+            </div>
+
             <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
               <p className="text-sm font-medium text-gray-700 mb-2">Example:</p>
               <div>
@@ -481,7 +503,7 @@ export default function PRDGenerator() {
 
             <Button 
               onClick={handleGenerate}
-              disabled={!isValidLength || isRateLimited}
+              disabled={!isValidLength || isRateLimited || !isValidEmail}
               className="w-full bg-orange-500 hover:bg-orange-600 text-lg py-6"
             >
               <Sparkles className="w-5 h-5 mr-2" />
