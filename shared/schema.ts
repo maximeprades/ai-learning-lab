@@ -67,6 +67,19 @@ export const demoPrds = pgTable("demo_prds", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const apiLogs = pgTable("api_logs", {
+  id: serial("id").primaryKey(),
+  visibleId: text("visible_id").notNull(),
+  type: text("type").notNull(),
+  provider: text("provider").notNull(),
+  email: text("email"),
+  model: text("model"),
+  scenarioId: integer("scenario_id"),
+  message: text("message").notNull(),
+  details: text("details"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -93,3 +106,4 @@ export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type Scenario = typeof scenarios.$inferSelect;
 export type PrecisionRecallStudent = typeof precisionRecallStudents.$inferSelect;
 export type DemoPrd = typeof demoPrds.$inferSelect;
+export type ApiLog = typeof apiLogs.$inferSelect;

@@ -1,4 +1,4 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, lt, and } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, 
@@ -9,6 +9,7 @@ import {
   scenarios,
   precisionRecallStudents,
   demoPrds,
+  apiLogs,
   type User, 
   type InsertUser,
   type Student,
@@ -18,8 +19,11 @@ import {
   type PromptTemplate,
   type Scenario,
   type PrecisionRecallStudent,
-  type DemoPrd
+  type DemoPrd,
+  type ApiLog
 } from "@shared/schema";
+
+const MAX_LOGS = 1000;
 
 const MAX_PROMPTS_PER_USER = 50;
 
@@ -302,6 +306,89 @@ export class DatabaseStorage implements IStorage {
     } else {
       await db.insert(demoPrds)
         .values({ key, content });
+    }
+  }
+
+  async createApiLog(log: {
+    visibleId: string;
+    type: string;
+    provider: string;
+    email?: string;
+    model?: string;
+    scenarioId?: number;
+    message: string;
+    details?: any;
+  }): Promise<ApiLog> {
+    const [entry] = await db.insert(apiLogs)
+      .values({
+        visibleId: log.visibleId,
+        type: log.type,
+        provider: log.provider,
+        email: log.email,
+        model: log.model,
+        scenarioId: log.scenarioId,
+        message: log.message,
+        details: log.details ? JSON.stringify(log.details) : null,
+      })
+      .returning();
+    
+    await this.pruneOldLogs();
+    return entry;
+  }
+
+  async getApiLogs(page: number = 1, limit: number = 50): Promise<{ logs: ApiLog[]; total: number; page: number; totalPages: number }> {
+    const offset = (page - 1) * limit;
+    
+    const [countResult] = await db.select({ count: sql<number>`count(*)` }).from(apiLogs);
+    const total = Number(countResult.count);
+    
+    const logs = await db.select()
+      .from(apiLogs)
+      .orderBy(desc(apiLogs.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    return {
+      logs: logs.map(log => ({
+        ...log,
+        details: log.details ? JSON.parse(log.details) : null
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    };
+  }
+
+  async getRecentApiLogs(limit: number = 100): Promise<ApiLog[]> {
+    const logs = await db.select()
+      .from(apiLogs)
+      .orderBy(desc(apiLogs.createdAt))
+      .limit(limit);
+    
+    return logs.map(log => ({
+      ...log,
+      details: log.details ? JSON.parse(log.details) : null
+    }));
+  }
+
+  async deleteLogsByEmail(email: string): Promise<void> {
+    await db.delete(apiLogs).where(eq(apiLogs.email, email));
+  }
+
+  async pruneOldLogs(): Promise<void> {
+    const [countResult] = await db.select({ count: sql<number>`count(*)` }).from(apiLogs);
+    const total = Number(countResult.count);
+    
+    if (total > MAX_LOGS) {
+      const logsToDelete = total - MAX_LOGS;
+      const oldLogs = await db.select({ id: apiLogs.id })
+        .from(apiLogs)
+        .orderBy(apiLogs.createdAt)
+        .limit(logsToDelete);
+      
+      for (const log of oldLogs) {
+        await db.delete(apiLogs).where(eq(apiLogs.id, log.id));
+      }
     }
   }
 }
