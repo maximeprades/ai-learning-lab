@@ -27,19 +27,19 @@ const MIN_CHARS = 100;
 const MAX_CHARS = 2000;
 const DAILY_LIMIT = 5;
 
-const EXAMPLE_BAD = "A todo app";
-const EXAMPLE_GOOD = "A todo app for college students that lets them add tasks by voice, set priorities, and get reminded before deadlines. It should work on mobile and sync across devices.";
+const EXAMPLE_BAD = "A homework app";
+const EXAMPLE_GOOD = "A homework tracker for middle schoolers that shows all assignments on a calendar, sends reminders the night before something is due, and lets you check things off when done. It should feel fun to use with a streak counter for completing homework on time.";
 
-const EXAMPLE_INPUT = "A recipe sharing app for home cooks who want to organize their favorite recipes, create shopping lists from selected meals, and plan their weekly dinners. Users should be able to save recipes from any website, add personal notes, and scale ingredient amounts for different serving sizes.";
+const EXAMPLE_INPUT = "A study buddy app for students who want to find classmates to study with. Users can post what subject they need help with, see who's online and available, and chat to set up study sessions. It should show a leaderboard of the most helpful study buddies based on ratings from other students.";
 
 const EXAMPLE_PRD_PREVIEW = `## PROJECT OVERVIEW
-A recipe management web application that helps home cooks organize, plan, and shop for their meals.
+A study companion web app that helps students connect with classmates for collaborative learning and study sessions.
 
 ## CORE FEATURES (Must Have)
-1. Recipe saving with URL import
-2. Shopping list generation
-3. Weekly meal planning calendar
-4. Ingredient scaling
+1. Study help request board with subject tags
+2. Real-time availability status for users
+3. In-app chat for coordinating sessions
+4. Helpfulness leaderboard with ratings
 ...`;
 
 interface OptionalRequirement {
