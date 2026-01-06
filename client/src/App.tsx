@@ -915,7 +915,7 @@ function App() {
       </Dialog>
 
       <Dialog open={showLeaderboard} onOpenChange={setShowLeaderboard}>
-        <DialogContent className="max-w-2xl w-[90vw]">
+        <DialogContent className="max-w-3xl w-[95vw]">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             <Trophy className="w-6 h-6 text-amber-500" />
             Leaderboard
