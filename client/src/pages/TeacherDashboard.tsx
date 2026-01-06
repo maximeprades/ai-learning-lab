@@ -360,7 +360,15 @@ export default function TeacherDashboard() {
       });
       
       if (response.ok) {
+        if (type === "pr") {
+          setPRStudents(prStudents.filter(s => s.id !== id));
+        } else {
+          setStudents(students.filter(s => s.id !== id));
+        }
         setDeleteConfirmDialog(null);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        console.error("Failed to delete student:", data.error || response.statusText);
       }
     } catch (error) {
       console.error("Failed to delete student:", error);
@@ -376,7 +384,11 @@ export default function TeacherDashboard() {
         method: "DELETE",
       });
       if (response.ok) {
+        setStudents([]);
         setDeleteAllConfirm(false);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        console.error("Failed to delete all students:", data.error || response.statusText);
       }
     } catch (error) {
       console.error("Failed to delete all students:", error);
@@ -389,7 +401,11 @@ export default function TeacherDashboard() {
         method: "DELETE",
       });
       if (response.ok) {
+        setPRStudents([]);
         setDeleteAllPRConfirm(false);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        console.error("Failed to delete all PR students:", data.error || response.statusText);
       }
     } catch (error) {
       console.error("Failed to delete all PR students:", error);
