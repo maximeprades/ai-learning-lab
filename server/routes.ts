@@ -8,6 +8,9 @@ import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
 import { storage } from "./storage";
 import { queueManager, QueueJob, QueueStats } from "./queue";
+import { db } from "./db";
+import { precisionRecallStudents } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "teacher123";
 
@@ -16,7 +19,7 @@ const studentInFlight = new Set<string>();
 const studentEnqueueLocks = new Set<string>();
 const RATE_LIMIT_MS = 5000;
 
-interface ApiLog {
+interface ApiLogEntry {
   id: string;
   timestamp: string;
   type: "request" | "response" | "error";
@@ -28,19 +31,31 @@ interface ApiLog {
   details?: any;
 }
 
-const apiLogs: ApiLog[] = [];
-const MAX_LOGS = 200;
-
-function createLog(log: Omit<ApiLog, "id" | "timestamp">): ApiLog {
-  const entry: ApiLog = {
-    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    timestamp: new Date().toISOString(),
+async function createLog(log: Omit<ApiLogEntry, "id" | "timestamp">): Promise<ApiLogEntry> {
+  const visibleId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const timestamp = new Date().toISOString();
+  
+  try {
+    await storage.createApiLog({
+      visibleId,
+      type: log.type,
+      provider: log.provider,
+      email: log.email,
+      model: log.model,
+      scenarioId: log.scenarioId,
+      message: log.message,
+      details: log.details,
+    });
+  } catch (err) {
+    console.error("Failed to save log to database:", err);
+  }
+  
+  const entry: ApiLogEntry = {
+    id: visibleId,
+    timestamp,
     ...log
   };
-  apiLogs.unshift(entry);
-  if (apiLogs.length > MAX_LOGS) {
-    apiLogs.pop();
-  }
+  
   broadcastToTeachers({ type: "api_log", log: entry });
   console.log(`[API ${log.type.toUpperCase()}] [${log.provider}] ${log.message}`, log.details || "");
   return entry;
@@ -425,7 +440,18 @@ export async function registerRoutes(
           ws.send(JSON.stringify({ type: "students_update", students }));
           const prStudents = await storage.getAllPRStudents();
           ws.send(JSON.stringify({ type: "pr_students_update", prStudents }));
-          ws.send(JSON.stringify({ type: "api_logs_initial", logs: apiLogs }));
+          const recentLogs = await storage.getRecentApiLogs(100);
+          ws.send(JSON.stringify({ type: "api_logs_initial", logs: recentLogs.map(log => ({
+            id: log.visibleId,
+            timestamp: log.createdAt?.toISOString() || new Date().toISOString(),
+            type: log.type,
+            provider: log.provider,
+            email: log.email,
+            model: log.model,
+            scenarioId: log.scenarioId,
+            message: log.message,
+            details: log.details,
+          })) }));
           ws.send(JSON.stringify({ type: "queue_stats", stats: queueManager.getStats() }));
           const jobs = queueManager.getQueuedJobs();
           ws.send(JSON.stringify({ type: "queue_jobs", jobs: jobs.map(j => ({
@@ -604,6 +630,10 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid student ID" });
       }
       
+      const student = await db.select().from(precisionRecallStudents).where(eq(precisionRecallStudents.id, studentId)).then(rows => rows[0]);
+      if (student) {
+        await storage.deleteLogsByEmail(student.email);
+      }
       await storage.deletePRStudent(studentId);
       await broadcastPRStudentUpdate();
       res.json({ success: true });
@@ -710,6 +740,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Student not found" });
       }
       
+      await storage.deleteLogsByEmail(student.email);
       await storage.deleteStudent(studentId);
       await broadcastStudentUpdate();
       
@@ -749,6 +780,33 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Toggle lock error:", error);
       res.status(500).json({ error: "Failed to toggle lock" });
+    }
+  });
+
+  app.get("/api/teacher/logs", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const result = await storage.getApiLogs(page, limit);
+      res.json({
+        logs: result.logs.map(log => ({
+          id: log.visibleId,
+          timestamp: log.createdAt?.toISOString() || new Date().toISOString(),
+          type: log.type,
+          provider: log.provider,
+          email: log.email,
+          model: log.model,
+          scenarioId: log.scenarioId,
+          message: log.message,
+          details: log.details,
+        })),
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+      });
+    } catch (error) {
+      console.error("Get logs error:", error);
+      res.status(500).json({ error: "Failed to get logs" });
     }
   });
 
