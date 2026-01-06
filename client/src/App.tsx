@@ -170,18 +170,11 @@ function App() {
                 }
               }
               
-              // Check if student is now #1 on leaderboard
-              try {
-                const leaderboardResponse = await fetch("/api/leaderboard");
-                if (leaderboardResponse.ok) {
-                  const leaderboard = await leaderboardResponse.json();
-                  if (leaderboard.length > 0 && leaderboard[0].email.toLowerCase() === email.toLowerCase()) {
-                    setShowConfetti(true);
-                    setTimeout(() => setShowConfetti(false), 5000);
-                  }
-                }
-              } catch (e) {
-                console.error("Failed to check leaderboard:", e);
+              // Celebrate perfect 10/10 score with confetti!
+              const score = data.results.filter((r: TestResult) => r.isCorrect).length;
+              if (score === 10 && data.results.length === 10) {
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 10000);
               }
             }
           }
@@ -463,9 +456,12 @@ function App() {
         <Confetti
           width={window.innerWidth}
           height={window.innerHeight}
-          recycle={false}
-          numberOfPieces={500}
-          gravity={0.3}
+          recycle={true}
+          numberOfPieces={800}
+          gravity={0.15}
+          wind={0.01}
+          colors={['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE']}
+          tweenDuration={100}
         />
       )}
       {!bypassMobile && (
