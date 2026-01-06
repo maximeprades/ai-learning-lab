@@ -24,24 +24,6 @@ export default function HomePage() {
         </div>
         
         <div className="grid md:grid-cols-3 gap-5 mb-10">
-          <a href="/precision-recall" className="group">
-            <div className="h-56 bg-gradient-to-br from-white to-emerald-50 rounded-2xl border-2 border-emerald-100 shadow-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-emerald-400 hover:-translate-y-1">
-              <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-emerald-200 group-hover:scale-110">
-                <Target className="w-7 h-7 text-emerald-600" />
-              </div>
-              <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
-                Precision & Recall
-              </h2>
-              <p className="text-sm text-gray-400 text-center mb-3">
-                Learn ML metrics
-              </p>
-              <div className="flex items-center gap-1 text-emerald-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <span>Start</span>
-                <ArrowRight className="w-4 h-4" />
-              </div>
-            </div>
-          </a>
-          
           <a href="/safety-lab" className="group">
             <div className="h-56 bg-gradient-to-br from-white to-violet-50 rounded-2xl border-2 border-violet-100 shadow-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-violet-400 hover:-translate-y-1">
               <div className="w-14 h-14 rounded-xl bg-violet-100 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-violet-200 group-hover:scale-110">
@@ -54,6 +36,24 @@ export default function HomePage() {
                 Write moderation prompts
               </p>
               <div className="flex items-center gap-1 text-violet-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span>Start</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
+          </a>
+          
+          <a href="/precision-recall" className="group">
+            <div className="h-56 bg-gradient-to-br from-white to-emerald-50 rounded-2xl border-2 border-emerald-100 shadow-lg p-6 flex flex-col items-center justify-center transition-all duration-300 hover:shadow-xl hover:border-emerald-400 hover:-translate-y-1">
+              <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-emerald-200 group-hover:scale-110">
+                <Target className="w-7 h-7 text-emerald-600" />
+              </div>
+              <h2 className="text-lg font-medium text-gray-800 text-center mb-2">
+                Precision & Recall
+              </h2>
+              <p className="text-sm text-gray-400 text-center mb-3">
+                Learn ML metrics
+              </p>
+              <div className="flex items-center gap-1 text-emerald-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <span>Start</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
