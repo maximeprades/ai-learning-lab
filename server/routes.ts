@@ -683,6 +683,7 @@ export async function registerRoutes(
       const student = await db.select().from(precisionRecallStudents).where(eq(precisionRecallStudents.id, studentId)).then(rows => rows[0]);
       if (student) {
         await storage.deleteLogsByEmail(student.email);
+        broadcastToStudent(student.email.toLowerCase(), { type: "student_deleted" });
       }
       await storage.deletePRStudent(studentId);
       await broadcastPRStudentUpdate();
@@ -698,6 +699,7 @@ export async function registerRoutes(
       const students = await storage.getAllPRStudents();
       for (const student of students) {
         await storage.deleteLogsByEmail(student.email);
+        broadcastToStudent(student.email.toLowerCase(), { type: "student_deleted" });
       }
       await storage.deleteAllPRStudents();
       await broadcastPRStudentUpdate();
@@ -824,6 +826,7 @@ export async function registerRoutes(
       await storage.deleteLogsByEmail(student.email);
       await storage.deleteStudent(studentId);
       await broadcastStudentUpdate();
+      broadcastToStudent(student.email.toLowerCase(), { type: "student_deleted" });
       
       res.json({ success: true });
     } catch (error) {
@@ -837,6 +840,7 @@ export async function registerRoutes(
       const students = await storage.getAllStudents();
       for (const student of students) {
         await storage.deleteLogsByEmail(student.email);
+        broadcastToStudent(student.email.toLowerCase(), { type: "student_deleted" });
       }
       await storage.deleteAllStudents();
       await broadcastStudentUpdate();

@@ -181,6 +181,18 @@ function App() {
           setCurrentJobId(null);
           setIsLoading(false);
           setError(data.message || "Your test was cancelled.");
+        } else if (data.type === "student_deleted") {
+          localStorage.removeItem(STORAGE_KEY_EMAIL);
+          setEmail(null);
+          setEmailInput("");
+          setInstructions("");
+          setResults(null);
+          setPromptVersions([]);
+          setSelectedVersion("draft");
+          setQueuePosition(null);
+          setJobProgress(null);
+          setCurrentJobId(null);
+          setIsLoading(false);
         }
       } catch (e) {
         console.error("WebSocket message error:", e);
