@@ -268,7 +268,7 @@ function App() {
         .then(res => res.json())
         .then(data => setLeaderboardData(data))
         .catch(console.error);
-    }, 5000);
+    }, 2500);
     
     return () => clearInterval(interval);
   }, [showLeaderboard]);
