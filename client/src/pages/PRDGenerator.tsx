@@ -33,14 +33,29 @@ const EXAMPLE_GOOD = "A homework tracker for middle schoolers that shows all ass
 const EXAMPLE_INPUT = "A study buddy app for students who want to find classmates to study with. Users can post what subject they need help with, see who's online and available, and chat to set up study sessions. It should show a leaderboard of the most helpful study buddies based on ratings from other students.";
 
 const EXAMPLE_PRD_PREVIEW = `## PROJECT OVERVIEW
-A study companion web app that helps students connect with classmates for collaborative learning and study sessions.
+A study companion web app that helps students connect with classmates for collaborative learning and study sessions. Students can post requests for help, find available study partners, and build reputation through peer ratings.
+
+## TARGET USERS
+Middle and high school students who want peer support for their studies, prefer collaborative learning, and need flexible ways to connect with classmates outside of school hours.
 
 ## CORE FEATURES (Must Have)
-1. Study help request board with subject tags
-2. Real-time availability status for users
-3. In-app chat for coordinating sessions
-4. Helpfulness leaderboard with ratings
-...`;
+1. **Help Request Board** - Post what subject you need help with (Math, Science, English, etc.), describe your question, and set urgency level
+2. **Online Status & Availability** - See which classmates are currently online and available to help, with "busy" and "away" modes
+3. **Direct Messaging** - Chat with potential study partners to coordinate when and how to meet (video call, in-person, or text)
+4. **Helpfulness Leaderboard** - Weekly and all-time rankings showing the most helpful study buddies based on 1-5 star ratings
+
+## NICE-TO-HAVE FEATURES
+- Subject badges earned after helping 10+ students in a topic
+- Study session scheduling with calendar integration
+- Group study rooms for 3+ students
+- Anonymous question posting option
+
+## PAGES & USER FLOW
+1. **Home/Feed** - See recent help requests from classmates, filter by subject
+2. **My Requests** - Track your posted questions and responses received
+3. **Leaderboard** - View top helpers this week and all-time
+4. **Profile** - Your stats, badges, and rating history
+5. **Chat** - Message threads with study partners`;
 
 interface OptionalRequirement {
   id: string;
