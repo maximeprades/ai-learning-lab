@@ -50,8 +50,14 @@ Preferred communication style: Simple, everyday language.
 - **ORM**: Drizzle ORM with PostgreSQL dialect
 - **Schema Location**: `shared/schema.ts`
 - **Migrations**: Stored in `migrations/` directory
-- **Current Schema**: Basic users table (id, username, password)
-- **Note**: Database is configured but minimally used for this educational app
+- **Tables**: users, students, prompt_versions, app_settings, prompt_templates, scenarios, precision_recall_students, demo_prds, api_logs
+- **API Logs**: Persisted to database (max 1000 entries, auto-pruned), supports pagination via `GET /api/teacher/logs?page=1&limit=50`
+- **Cascade Deletion**: When students are deleted, their associated logs are also removed
+
+### Queue System (server/queue/)
+- **Rate Limiting**: OpenAI (2 concurrent, 750ms cooldown), Anthropic (1 concurrent, 1250ms cooldown)
+- **Features**: Job queuing, real-time progress via WebSocket, student queue position tracking, job cancellation (queued only)
+- **State Restoration**: Students reconnect to existing queue position on page refresh
 
 ### Project Structure
 ```
