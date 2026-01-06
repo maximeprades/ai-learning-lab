@@ -259,6 +259,20 @@ function App() {
     fetchLeaderboard();
   };
 
+  // Auto-refresh leaderboard every 5 seconds when dialog is open
+  useEffect(() => {
+    if (!showLeaderboard) return;
+    
+    const interval = setInterval(() => {
+      fetch("/api/leaderboard")
+        .then(res => res.json())
+        .then(data => setLeaderboardData(data))
+        .catch(console.error);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [showLeaderboard]);
+
   useEffect(() => {
     const storedEmail = getStoredEmail();
     if (storedEmail) {
