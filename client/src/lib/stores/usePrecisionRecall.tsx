@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export type Animal = {
   id: number;
-  type: "dog" | "cat" | "giraffe" | "elephant" | "lion" | "tiger" | "bear" | "rabbit";
+  type: "dog" | "cat" | "giraffe" | "elephant" | "lion" | "tiger" | "bear" | "rabbit" | "fox" | "wolf" | "koala" | "panda";
   emoji: string;
   predictedAsDog: boolean;
 };
@@ -46,6 +46,8 @@ interface PrecisionRecallState {
   calculateRecall: () => number;
 }
 
+const dogEmojis = ["🐕", "🐶", "🐩"];
+
 const animalTypes: Array<{ type: Animal["type"]; emoji: string }> = [
   { type: "dog", emoji: "🐕" },
   { type: "cat", emoji: "🐱" },
@@ -55,6 +57,10 @@ const animalTypes: Array<{ type: Animal["type"]; emoji: string }> = [
   { type: "tiger", emoji: "🐯" },
   { type: "bear", emoji: "🐻" },
   { type: "rabbit", emoji: "🐰" },
+  { type: "fox", emoji: "🦊" },
+  { type: "wolf", emoji: "🐺" },
+  { type: "koala", emoji: "🐨" },
+  { type: "panda", emoji: "🐼" },
 ];
 
 function generateAnimals(): Animal[] {
@@ -64,10 +70,11 @@ function generateAnimals(): Animal[] {
   const numDogs = Math.floor(Math.random() * 4) + 2;
   
   for (let i = 0; i < numDogs; i++) {
+    const randomDogEmoji = dogEmojis[Math.floor(Math.random() * dogEmojis.length)];
     animals.push({
       id: i,
       type: "dog",
-      emoji: "🐕",
+      emoji: randomDogEmoji,
       predictedAsDog: false,
     });
   }
