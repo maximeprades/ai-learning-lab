@@ -743,7 +743,7 @@ export default function TeacherDashboard() {
                           return a.localeCompare(b);
                         })
                         .map(([teamKey, teamStudents], groupIndex) => (
-                          <fragment key={teamKey}>
+                          <div key={teamKey} className="contents">
                             {teamKey !== "no-team" && (
                               <tr className="bg-indigo-50/50">
                                 <td colSpan={4} className="px-4 py-2 text-xs font-bold text-indigo-600 uppercase tracking-wider border-t border-indigo-100">
@@ -767,7 +767,7 @@ export default function TeacherDashboard() {
                                 </td>
                               </tr>
                             ))}
-                          </fragment>
+                          </div>
                         ));
                     })()}
                   </tbody>
