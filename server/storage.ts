@@ -8,6 +8,7 @@ import {
   promptTemplates,
   scenarios,
   precisionRecallStudents,
+  studentRegistrations,
   demoPrds,
   apiLogs,
   type User, 
@@ -19,6 +20,7 @@ import {
   type PromptTemplate,
   type Scenario,
   type PrecisionRecallStudent,
+  type StudentRegistration,
   type DemoPrd,
   type ApiLog
 } from "@shared/schema";
@@ -394,6 +396,40 @@ export class DatabaseStorage implements IStorage {
         await db.delete(apiLogs).where(eq(apiLogs.id, log.id));
       }
     }
+  }
+
+  async registerStudentSeparate(email: string, name: string, teamName: string): Promise<StudentRegistration> {
+    const [existing] = await db.select()
+      .from(studentRegistrations)
+      .where(eq(studentRegistrations.email, email));
+    
+    if (existing) {
+      const [updated] = await db.update(studentRegistrations)
+        .set({ name, teamName })
+        .where(eq(studentRegistrations.email, email))
+        .returning();
+      return updated;
+    }
+    
+    const [registration] = await db.insert(studentRegistrations)
+      .values({ email, name, teamName })
+      .returning();
+    return registration;
+  }
+
+  async getAllRegistrations(): Promise<StudentRegistration[]> {
+    return await db.select()
+      .from(studentRegistrations)
+      .orderBy(desc(studentRegistrations.createdAt));
+  }
+
+  async deleteRegistration(id: number): Promise<void> {
+    await db.delete(studentRegistrations)
+      .where(eq(studentRegistrations.id, id));
+  }
+
+  async deleteAllRegistrations(): Promise<void> {
+    await db.delete(studentRegistrations);
   }
 }
 

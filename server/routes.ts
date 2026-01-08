@@ -762,14 +762,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Team name is required" });
       }
       
-      const student = await storage.registerStudent(
+      const registration = await storage.registerStudentSeparate(
         email.toLowerCase().trim(),
         name.trim(),
         teamName.trim()
       );
       
       await broadcastStudentUpdate();
-      res.json({ success: true, student });
+      res.json({ success: true, student: registration });
     } catch (error: any) {
       console.error("Student registration error:", error);
       res.status(500).json({ error: error.message || "Failed to register" });
@@ -850,6 +850,42 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Delete all students error:", error);
       res.status(500).json({ error: "Failed to delete all students" });
+    }
+  });
+
+  app.get("/api/teacher/registrations", async (_req, res) => {
+    try {
+      const registrations = await storage.getAllRegistrations();
+      res.json(registrations);
+    } catch (error) {
+      console.error("Get registrations error:", error);
+      res.status(500).json({ error: "Failed to get registrations" });
+    }
+  });
+
+  app.delete("/api/teacher/registrations/:id", requireTeacherAuth, async (req, res) => {
+    try {
+      const regId = parseInt(req.params.id);
+      if (isNaN(regId)) {
+        return res.status(400).json({ error: "Invalid registration ID" });
+      }
+      await storage.deleteRegistration(regId);
+      await broadcastStudentUpdate();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete registration error:", error);
+      res.status(500).json({ error: "Failed to delete registration" });
+    }
+  });
+
+  app.delete("/api/teacher/registrations", requireTeacherAuth, async (_req, res) => {
+    try {
+      await storage.deleteAllRegistrations();
+      await broadcastStudentUpdate();
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete all registrations error:", error);
+      res.status(500).json({ error: "Failed to delete all registrations" });
     }
   });
 
