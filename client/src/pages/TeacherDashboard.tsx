@@ -728,22 +728,48 @@ export default function TeacherDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-200">
-                    {students.map((student) => (
-                      <tr key={student.id}>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{student.name || "N/A"}</td>
-                        <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
-                        <td className="px-4 py-3 text-sm">
-                          {student.teamName ? (
-                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold uppercase">
-                              {student.teamName}
-                            </span>
-                          ) : "N/A"}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-500">
-                          {formatTime(student.lastActive)}
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const groups: Record<string, Student[]> = {};
+                      students.forEach(s => {
+                        const team = s.teamName?.trim().toLowerCase() || "no-team";
+                        if (!groups[team]) groups[team] = [];
+                        groups[team].push(s);
+                      });
+                      
+                      return Object.entries(groups)
+                        .sort(([a], [b]) => {
+                          if (a === "no-team") return 1;
+                          if (b === "no-team") return -1;
+                          return a.localeCompare(b);
+                        })
+                        .map(([teamKey, teamStudents], groupIndex) => (
+                          <fragment key={teamKey}>
+                            {teamKey !== "no-team" && (
+                              <tr className="bg-indigo-50/50">
+                                <td colSpan={4} className="px-4 py-2 text-xs font-bold text-indigo-600 uppercase tracking-wider border-t border-indigo-100">
+                                  Team: {teamStudents[0].teamName} ({teamStudents.length} members)
+                                </td>
+                              </tr>
+                            )}
+                            {teamStudents.map((student) => (
+                              <tr key={student.id} className={teamKey !== "no-team" ? "bg-white/40" : ""}>
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{student.name || "N/A"}</td>
+                                <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
+                                <td className="px-4 py-3 text-sm">
+                                  {student.teamName ? (
+                                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold uppercase">
+                                      {student.teamName}
+                                    </span>
+                                  ) : "N/A"}
+                                </td>
+                                <td className="px-4 py-3 text-center text-sm text-gray-500">
+                                  {formatTime(student.lastActive)}
+                                </td>
+                              </tr>
+                            ))}
+                          </fragment>
+                        ));
+                    })()}
                   </tbody>
                 </table>
               </div>
