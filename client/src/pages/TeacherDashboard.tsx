@@ -26,6 +26,14 @@ interface PRStudent {
   lastActive: string | null;
 }
 
+interface Registration {
+  id: number;
+  email: string;
+  name: string | null;
+  teamName: string | null;
+  createdAt: string | null;
+}
+
 interface Scenario {
   id: number;
   text: string;
@@ -91,6 +99,7 @@ export default function TeacherDashboard() {
   
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [prStudents, setPRStudents] = useState<PRStudent[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [promptTemplate, setPromptTemplate] = useState("");
@@ -229,6 +238,11 @@ export default function TeacherDashboard() {
           image: s.imageData || `/scenarios/${s.image}`
         }))))
         .catch(console.error);
+
+      fetch("/api/teacher/registrations")
+        .then(res => res.json())
+        .then(data => setRegistrations(data))
+        .catch(console.error);
     }
   }, [isAuthenticated]);
 
@@ -246,6 +260,8 @@ export default function TeacherDashboard() {
           const data = JSON.parse(event.data);
           if (data.type === "students_update") {
             setStudents(data.students);
+          } else if (data.type === "registrations_update") {
+            setRegistrations(data.registrations);
           } else if (data.type === "pr_students_update") {
             setPRStudents(data.prStudents);
           } else if (data.type === "api_logs_initial") {
@@ -709,12 +725,12 @@ export default function TeacherDashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-indigo-800">
                 <Users className="w-5 h-5" />
-                Student Registrations ({students.length})
+                Student Registrations ({registrations.length})
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            {students.length === 0 ? (
+            {registrations.length === 0 ? (
               <p className="text-center text-gray-500 py-8">No students registered yet.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -729,8 +745,8 @@ export default function TeacherDashboard() {
                   </thead>
                   <tbody className="divide-y divide-indigo-200">
                     {(() => {
-                      const groups: Record<string, Student[]> = {};
-                      students.forEach(s => {
+                      const groups: Record<string, Registration[]> = {};
+                      registrations.forEach(s => {
                         const team = s.teamName?.trim().toLowerCase() || "no-team";
                         if (!groups[team]) groups[team] = [];
                         groups[team].push(s);
@@ -742,28 +758,28 @@ export default function TeacherDashboard() {
                           if (b === "no-team") return -1;
                           return a.localeCompare(b);
                         })
-                        .map(([teamKey, teamStudents], groupIndex) => (
+                        .map(([teamKey, teamRegs], groupIndex) => (
                           <div key={teamKey} className="contents">
                             {teamKey !== "no-team" && (
                               <tr className="bg-indigo-50/50">
                                 <td colSpan={4} className="px-4 py-2 text-xs font-bold text-indigo-600 uppercase tracking-wider border-t border-indigo-100">
-                                  Team: {teamStudents[0].teamName} ({teamStudents.length} members)
+                                  Team: {teamRegs[0].teamName} ({teamRegs.length} members)
                                 </td>
                               </tr>
                             )}
-                            {teamStudents.map((student) => (
-                              <tr key={student.id} className={teamKey !== "no-team" ? "bg-white/40" : ""}>
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{student.name || "N/A"}</td>
-                                <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
+                            {teamRegs.map((reg) => (
+                              <tr key={reg.id} className={teamKey !== "no-team" ? "bg-white/40" : ""}>
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{reg.name || "N/A"}</td>
+                                <td className="px-4 py-3 text-sm text-gray-800">{reg.email}</td>
                                 <td className="px-4 py-3 text-sm">
-                                  {student.teamName ? (
+                                  {reg.teamName ? (
                                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold uppercase">
-                                      {student.teamName}
+                                      {reg.teamName}
                                     </span>
                                   ) : "N/A"}
                                 </td>
                                 <td className="px-4 py-3 text-center text-sm text-gray-500">
-                                  {formatTime(student.lastActive)}
+                                  {formatTime(reg.createdAt)}
                                 </td>
                               </tr>
                             ))}

@@ -297,7 +297,9 @@ function broadcastToTeachers(data: any) {
 
 async function broadcastStudentUpdate() {
   const students = await storage.getAllStudents();
+  const registrations = await storage.getAllRegistrations();
   broadcastToTeachers({ type: "students_update", students });
+  broadcastToTeachers({ type: "registrations_update", registrations });
 }
 
 async function broadcastPRStudentUpdate() {
