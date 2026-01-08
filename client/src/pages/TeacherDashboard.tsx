@@ -10,6 +10,8 @@ import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, Rotate
 interface Student {
   id: number;
   email: string;
+  name: string | null;
+  teamName: string | null;
   isRunningTest: boolean | null;
   highestScore: number | null;
   promptCount: number | null;
@@ -731,6 +733,7 @@ export default function TeacherDashboard() {
                   <thead className="bg-green-100">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-green-800">Rank</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-green-800">Name / Team</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-green-800">Email</th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Prompts</th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-green-800">Best Score</th>
@@ -739,18 +742,28 @@ export default function TeacherDashboard() {
                       <th className="px-2 py-3 w-10"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-green-200">
-                    {students.map((student, index) => (
-                      <tr key={student.id} className={student.isRunningTest ? "bg-yellow-50" : ""}>
-                        <td className="px-4 py-3 text-sm">
-                          <span className="flex items-center gap-2">
-                            {index === 0 && <Trophy className="w-4 h-4 text-yellow-500" />}
-                            {index === 1 && <Trophy className="w-4 h-4 text-gray-400" />}
-                            {index === 2 && <Trophy className="w-4 h-4 text-amber-600" />}
-                            <span className="font-medium">#{index + 1}</span>
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
+                      <tbody className="divide-y divide-green-200">
+                        {students.map((student, index) => (
+                          <tr key={student.id} className={student.isRunningTest ? "bg-yellow-50" : ""}>
+                            <td className="px-4 py-3 text-sm">
+                              <span className="flex items-center gap-2">
+                                {index === 0 && <Trophy className="w-4 h-4 text-yellow-500" />}
+                                {index === 1 && <Trophy className="w-4 h-4 text-gray-400" />}
+                                {index === 2 && <Trophy className="w-4 h-4 text-amber-600" />}
+                                <span className="font-medium">#{index + 1}</span>
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-gray-900">{student.name || "N/A"}</span>
+                                {student.teamName && (
+                                  <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full w-fit font-bold uppercase">
+                                    {student.teamName}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
                         <td className="px-4 py-3 text-center text-sm">{student.promptCount || 0}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`font-bold text-lg ${
