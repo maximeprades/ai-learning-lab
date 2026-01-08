@@ -428,6 +428,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(studentRegistrations.id, id));
   }
 
+  async updateRegistration(id: number, data: { name?: string; email?: string; teamName?: string }): Promise<StudentRegistration | null> {
+    const [updated] = await db.update(studentRegistrations)
+      .set(data)
+      .where(eq(studentRegistrations.id, id))
+      .returning();
+    return updated || null;
+  }
+
   async deleteAllRegistrations(): Promise<void> {
     await db.delete(studentRegistrations);
   }

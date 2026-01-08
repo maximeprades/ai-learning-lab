@@ -865,6 +865,25 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/teacher/registrations/:id", requireTeacherAuth, async (req, res) => {
+    try {
+      const regId = parseInt(req.params.id);
+      if (isNaN(regId)) {
+        return res.status(400).json({ error: "Invalid registration ID" });
+      }
+      const { name, email, teamName } = req.body;
+      const updated = await storage.updateRegistration(regId, { name, email, teamName });
+      if (!updated) {
+        return res.status(404).json({ error: "Registration not found" });
+      }
+      await broadcastStudentUpdate();
+      res.json(updated);
+    } catch (error) {
+      console.error("Update registration error:", error);
+      res.status(500).json({ error: "Failed to update registration" });
+    }
+  });
+
   app.delete("/api/teacher/registrations/:id", requireTeacherAuth, async (req, res) => {
     try {
       const regId = parseInt(req.params.id);

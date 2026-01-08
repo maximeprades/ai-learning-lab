@@ -114,6 +114,9 @@ export default function TeacherDashboard() {
   const [scenarioSaving, setScenarioSaving] = useState(false);
   
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ id: number; email: string; type: "prompt101" | "pr" } | null>(null);
+  const [editingRegistration, setEditingRegistration] = useState<Registration | null>(null);
+  const [editRegForm, setEditRegForm] = useState({ name: "", email: "", teamName: "" });
+  const [editRegSaving, setEditRegSaving] = useState(false);
   
   const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
   const [showLogs, setShowLogs] = useState(true);
@@ -430,6 +433,30 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleUpdateRegistration = async () => {
+    if (!editingRegistration) return;
+    setEditRegSaving(true);
+    try {
+      const response = await teacherFetch(`/api/teacher/registrations/${editingRegistration.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editRegForm),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setRegistrations(registrations.map(r => r.id === editingRegistration.id ? updated : r));
+        setEditingRegistration(null);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        console.error("Failed to update registration:", data.error || response.statusText);
+      }
+    } catch (error) {
+      console.error("Failed to update registration:", error);
+    } finally {
+      setEditRegSaving(false);
+    }
+  };
+
   const handleSaveScenario = async () => {
     if (!scenarioForm.text.trim()) return;
     
@@ -741,6 +768,7 @@ export default function TeacherDashboard() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-800">Email</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-800">Team</th>
                       <th className="px-4 py-3 text-center text-sm font-semibold text-indigo-800">Joined</th>
+                      <th className="px-2 py-3 w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-indigo-200">
@@ -780,6 +808,19 @@ export default function TeacherDashboard() {
                                 </td>
                                 <td className="px-4 py-3 text-center text-sm text-gray-500">
                                   {formatTime(reg.createdAt)}
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50"
+                                    onClick={() => {
+                                      setEditingRegistration(reg);
+                                      setEditRegForm({ name: reg.name || "", email: reg.email, teamName: reg.teamName || "" });
+                                    }}
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </Button>
                                 </td>
                               </tr>
                             ))}
@@ -1261,6 +1302,52 @@ export default function TeacherDashboard() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteAllPRStudents}>
               Delete All
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editingRegistration !== null} onOpenChange={(open) => !open && setEditingRegistration(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Student Registration</DialogTitle>
+            <DialogDescription>
+              Update the student's name, email, or team assignment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={editRegForm.name}
+                onChange={(e) => setEditRegForm({ ...editRegForm, name: e.target.value })}
+                placeholder="Student name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                value={editRegForm.email}
+                onChange={(e) => setEditRegForm({ ...editRegForm, email: e.target.value })}
+                placeholder="student@email.com"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Team Name</label>
+              <Input
+                value={editRegForm.teamName}
+                onChange={(e) => setEditRegForm({ ...editRegForm, teamName: e.target.value })}
+                placeholder="Team name (optional)"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setEditingRegistration(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateRegistration} disabled={editRegSaving}>
+              {editRegSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              Save
             </Button>
           </div>
         </DialogContent>
