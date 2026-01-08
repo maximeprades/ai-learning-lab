@@ -72,7 +72,7 @@ function App() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [leaderboardData, setLeaderboardData] = useState<{ email: string; score: number | null; promptCount: number; hasAttempted: boolean }[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<{ email: string; name: string | null; teamName: string | null; score: number | null; promptCount: number; hasAttempted: boolean }[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   
@@ -1015,8 +1015,15 @@ function App() {
                       #{index + 1}
                     </span>
                     <div>
-                      <p className="font-medium text-gray-800">{student.email}</p>
-                      <p className="text-xs text-gray-500">{student.promptCount || 0} prompts tried</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-800">{student.name || "Anonymous"}</p>
+                        {student.teamName && (
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold uppercase">
+                            {student.teamName}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">{student.email} • {student.promptCount || 0} prompts tried</p>
                     </div>
                   </div>
                   <div className="text-right">

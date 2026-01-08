@@ -603,6 +603,8 @@ export async function registerRoutes(
       const leaderboard = allStudents
         .map(s => ({
           email: s.email,
+          name: s.name,
+          teamName: s.teamName,
           score: s.highestScore,
           promptCount: s.promptCount,
           hasAttempted: (s.promptCount ?? 0) > 0
