@@ -704,6 +704,53 @@ export default function TeacherDashboard() {
           </CardContent>
         </Card>
 
+        <Card className="border-2 border-indigo-200 bg-indigo-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-indigo-800">
+                <Users className="w-5 h-5" />
+                Student Registrations ({students.length})
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {students.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No students registered yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-indigo-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-800">Name</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-800">Email</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-800">Team</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-indigo-800">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-indigo-200">
+                    {students.map((student) => (
+                      <tr key={student.id}>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{student.name || "N/A"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {student.teamName ? (
+                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold uppercase">
+                              {student.teamName}
+                            </span>
+                          ) : "N/A"}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-gray-500">
+                          {formatTime(student.lastActive)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="border-2 border-green-200 bg-green-50">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
