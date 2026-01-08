@@ -60,6 +60,14 @@ export const precisionRecallStudents = pgTable("precision_recall_students", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const studentRegistrations = pgTable("student_registrations", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name"),
+  teamName: text("team_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const demoPrds = pgTable("demo_prds", {
   id: serial("id").primaryKey(),
   key: text("key").notNull().unique(),
@@ -105,5 +113,6 @@ export type InsertPromptVersion = z.infer<typeof insertPromptVersionSchema>;
 export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type Scenario = typeof scenarios.$inferSelect;
 export type PrecisionRecallStudent = typeof precisionRecallStudents.$inferSelect;
+export type StudentRegistration = typeof studentRegistrations.$inferSelect;
 export type DemoPrd = typeof demoPrds.$inferSelect;
 export type ApiLog = typeof apiLogs.$inferSelect;
