@@ -843,14 +843,19 @@ export default function TeacherDashboard() {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-sm">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-gray-900">{student.name || "N/A"}</span>
-                                {student.teamName && (
-                                  <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full w-fit font-bold uppercase">
-                                    {student.teamName}
-                                  </span>
-                                )}
-                              </div>
+                              {(() => {
+                                const reg = registrations.find(r => r.email.toLowerCase() === student.email.toLowerCase());
+                                return (
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-gray-900">{reg?.name || student.name || "N/A"}</span>
+                                    {reg?.teamName && (
+                                      <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full w-fit font-bold uppercase">
+                                        {reg.teamName}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-800">{student.email}</td>
                         <td className="px-4 py-3 text-center text-sm">{student.promptCount || 0}</td>
