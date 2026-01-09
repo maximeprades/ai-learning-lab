@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft, Target, ScrollText, AlertCircle, CheckCircle2, Send, Pause, Play, ListOrdered, XCircle } from "lucide-react";
+import { Shield, Lock, Unlock, Users, Trophy, Clock, Trash2, Edit3, Plus, RotateCcw, Save, ImageIcon, Loader2, ArrowLeft, Target, ScrollText, AlertCircle, CheckCircle2, Send, Pause, Play, ListOrdered, XCircle, WifiOff, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { fetchWithRetry, getFriendlyError } from "@/lib/api";
 
 interface Student {
   id: number;
@@ -118,6 +120,9 @@ export default function TeacherDashboard() {
   const [editRegForm, setEditRegForm] = useState({ name: "", email: "", teamName: "" });
   const [editRegSaving, setEditRegSaving] = useState(false);
   
+  const [connectionStatus, setConnectionStatus] = useState<"connected" | "connecting" | "disconnected">("connecting");
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null);
+  
   const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
   const [showLogs, setShowLogs] = useState(true);
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -217,45 +222,94 @@ export default function TeacherDashboard() {
     });
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetch("/api/app-lock")
-        .then(res => res.json())
-        .then(data => setIsAppLocked(data.isLocked))
-        .catch(console.error);
+  const loadDashboardData = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
+    setDataLoadError(null);
+    
+    try {
+      const results = await Promise.allSettled([
+        fetchWithRetry("/api/app-lock"),
+        fetchWithRetry("/api/teacher/prompt-template"),
+        fetchWithRetry("/api/teacher/scenarios"),
+        fetchWithRetry("/api/teacher/registrations"),
+      ]);
       
-      fetch("/api/teacher/prompt-template")
-        .then(res => res.json())
-        .then(data => {
-          setPromptTemplate(data.template);
-          setDefaultTemplate(data.defaultTemplate);
-        })
-        .catch(console.error);
+      const [lockRes, templateRes, scenariosRes, regsRes] = results;
       
-      fetch("/api/teacher/scenarios")
-        .then(res => res.json())
-        .then(data => setScenarios(data.map((s: any) => ({
+      if (lockRes.status === "fulfilled" && lockRes.value.ok) {
+        const data = await lockRes.value.json();
+        setIsAppLocked(data.isLocked);
+      }
+      
+      if (templateRes.status === "fulfilled" && templateRes.value.ok) {
+        const data = await templateRes.value.json();
+        setPromptTemplate(data.template);
+        setDefaultTemplate(data.defaultTemplate);
+      }
+      
+      if (scenariosRes.status === "fulfilled" && scenariosRes.value.ok) {
+        const data = await scenariosRes.value.json();
+        setScenarios(data.map((s: any) => ({
           id: s.id,
           text: s.text,
           expected: s.expected,
           image: s.imageData || `/scenarios/${s.image}`
-        }))))
-        .catch(console.error);
-
-      fetch("/api/teacher/registrations")
-        .then(res => res.json())
-        .then(data => setRegistrations(data))
-        .catch(console.error);
+        })));
+      }
+      
+      if (regsRes.status === "fulfilled" && regsRes.value.ok) {
+        const data = await regsRes.value.json();
+        setRegistrations(data);
+      }
+      
+      const failedCount = results.filter(r => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok)).length;
+      if (failedCount > 0) {
+        setDataLoadError("Some data couldn't be loaded. Click refresh to try again.");
+      }
+      
+    } catch (error) {
+      setDataLoadError(getFriendlyError(error));
+      toast.error("Failed to load dashboard data", {
+        description: "The server may be busy. Please try again.",
+        action: { label: "Retry", onClick: loadDashboardData },
+      });
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    let ws: WebSocket | null = null;
+    let reconnectAttempts = 0;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isMounted = true;
+    const maxReconnectAttempts = 10;
+    const baseReconnectDelay = 1000;
+
+    function connect() {
+      if (!isMounted) return;
+      
+      setConnectionStatus("connecting");
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      
+      try {
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      } catch (error) {
+        console.error("WebSocket creation failed:", error);
+        setConnectionStatus("disconnected");
+        scheduleReconnect();
+        return;
+      }
       
       ws.onopen = () => {
-        ws.send(JSON.stringify({ type: "teacher_subscribe" }));
+        reconnectAttempts = 0;
+        setConnectionStatus("connected");
+        ws?.send(JSON.stringify({ type: "teacher_subscribe" }));
       };
       
       ws.onmessage = (event) => {
@@ -281,13 +335,53 @@ export default function TeacherDashboard() {
         }
       };
       
-      wsRef.current = ws;
-      
-      return () => {
-        ws.close();
-        wsRef.current = null;
+      ws.onerror = () => {
+        setConnectionStatus("disconnected");
       };
+      
+      ws.onclose = () => {
+        ws = null;
+        wsRef.current = null;
+        if (isMounted) {
+          setConnectionStatus("disconnected");
+          scheduleReconnect();
+        }
+      };
+      
+      wsRef.current = ws;
     }
+
+    function scheduleReconnect() {
+      if (!isMounted || reconnectAttempts >= maxReconnectAttempts) {
+        if (reconnectAttempts >= maxReconnectAttempts) {
+          toast.error("Lost connection to server", {
+            description: "Please refresh the page to reconnect.",
+          });
+        }
+        return;
+      }
+      
+      const delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), 30000);
+      reconnectAttempts++;
+      
+      reconnectTimeout = setTimeout(() => {
+        connect();
+      }, delay);
+    }
+
+    connect();
+    
+    return () => {
+      isMounted = false;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+      wsRef.current = null;
+    };
   }, [isAuthenticated]);
 
   const toggleAppLock = async () => {
@@ -613,6 +707,42 @@ export default function TeacherDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        {(connectionStatus !== "connected" || dataLoadError) && (
+          <div className={`rounded-lg p-3 flex items-center justify-between ${
+            connectionStatus === "disconnected" ? "bg-red-100 border border-red-300" :
+            connectionStatus === "connecting" ? "bg-yellow-100 border border-yellow-300" :
+            "bg-amber-100 border border-amber-300"
+          }`}>
+            <div className="flex items-center gap-2">
+              {connectionStatus === "disconnected" ? (
+                <>
+                  <WifiOff className="w-5 h-5 text-red-600" />
+                  <span className="text-red-700 font-medium">Connection lost. Attempting to reconnect...</span>
+                </>
+              ) : connectionStatus === "connecting" ? (
+                <>
+                  <Loader2 className="w-5 h-5 text-yellow-600 animate-spin" />
+                  <span className="text-yellow-700 font-medium">Connecting to server...</span>
+                </>
+              ) : dataLoadError ? (
+                <>
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <span className="text-amber-700 font-medium">{dataLoadError}</span>
+                </>
+              ) : null}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadDashboardData}
+              className="bg-white"
+            >
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Refresh
+            </Button>
+          </div>
+        )}
+
         <Card className="border-2 border-indigo-200 bg-indigo-50">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
