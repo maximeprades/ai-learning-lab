@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Mail, History, Trophy, RefreshCw, Stethoscope, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, PawPrint, Shield, AlertTriangle, ImageIcon, ChevronLeft, ChevronRight, Mail, History, Trophy, RefreshCw, Stethoscope, Clock, WifiOff } from "lucide-react";
 import "@fontsource/inter";
+import { toast } from "sonner";
+import { fetchWithRetry, getFriendlyError } from "@/lib/api";
 
 interface TestResult {
   id: number;
@@ -84,7 +86,10 @@ function App() {
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [jobProgress, setJobProgress] = useState<{ current: number; total: number } | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const connectWebSocket = useCallback((userEmail: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -94,7 +99,13 @@ function App() {
     wsRef.current = ws;
     
     ws.onopen = () => {
+      reconnectAttemptsRef.current = 0;
+      setWsConnected(true);
       ws.send(JSON.stringify({ type: "student_subscribe", email: userEmail }));
+    };
+    
+    ws.onerror = () => {
+      setWsConnected(false);
     };
     
     ws.onmessage = async (event) => {
@@ -183,7 +194,11 @@ function App() {
           setJobProgress(null);
           setCurrentJobId(null);
           setIsLoading(false);
-          setError(data.error || "Test failed. Please try again.");
+          const friendlyError = getFriendlyError(data.error || "Test failed");
+          setError(friendlyError);
+          toast.error("Test couldn't complete", {
+            description: friendlyError,
+          });
         } else if (data.type === "job_cancelled") {
           setQueuePosition(null);
           setJobProgress(null);
@@ -210,6 +225,21 @@ function App() {
     
     ws.onclose = () => {
       wsRef.current = null;
+      setWsConnected(false);
+      
+      if (reconnectAttemptsRef.current < 10) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+        reconnectAttemptsRef.current++;
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (userEmail) {
+            connectWebSocket(userEmail);
+          }
+        }, delay);
+      } else {
+        toast.error("Lost connection to server", {
+          description: "Please refresh the page to reconnect.",
+        });
+      }
     };
     
     return () => {
@@ -223,21 +253,34 @@ function App() {
       connectWebSocket(email);
     }
     return () => {
+      reconnectAttemptsRef.current = 0;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       wsRef.current?.close();
       wsRef.current = null;
     };
   }, [email, connectWebSocket]);
 
   useEffect(() => {
-    fetch("/api/scenarios")
-      .then(res => res.json())
+    fetchWithRetry("/api/scenarios")
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then(data => setScenarios(data.map((s: any) => ({
         id: s.id,
         text: s.text,
         expected: s.expected,
         image: s.imageData || `/scenarios/${s.image}`
       }))))
-      .catch(console.error);
+      .catch(err => {
+        console.error("Failed to load scenarios:", err);
+        toast.error("Couldn't load test scenarios", {
+          description: "Please refresh the page to try again.",
+        });
+      });
   }, []);
 
 

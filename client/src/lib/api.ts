@@ -19,6 +19,21 @@ export function getFriendlyError(error: unknown, fallback = "Something went wron
     if (error.message.includes("timeout")) {
       return FRIENDLY_ERRORS.timeout;
     }
+    if (error.message.includes("429") || error.message.toLowerCase().includes("rate limit")) {
+      return FRIENDLY_ERRORS["429"];
+    }
+  }
+  if (typeof error === "string") {
+    if (error.includes("429") || error.toLowerCase().includes("rate limit")) {
+      return FRIENDLY_ERRORS["429"];
+    }
+    if (error.toLowerCase().includes("network") || error.toLowerCase().includes("connection")) {
+      return FRIENDLY_ERRORS.network;
+    }
+    if (error.toLowerCase().includes("timeout")) {
+      return FRIENDLY_ERRORS.timeout;
+    }
+    return error.length > 100 ? fallback : error;
   }
   return fallback;
 }
