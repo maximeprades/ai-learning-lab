@@ -681,33 +681,15 @@ export default function TeacherDashboard() {
     );
   }
 
-  const downloadIncomeStatement = () => {
-    const link = document.createElement("a");
-    link.href = "/IncomeStatement.xlsx";
-    link.download = "YosemiteSierraView_IncomeStatement.xlsx";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50">
       <header className="bg-gradient-to-r from-green-600 to-emerald-600 text-white py-6 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Shield className="w-10 h-10" />
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Teacher Dashboard</h1>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={downloadIncomeStatement} 
-                className="mt-1 bg-white/20 text-white border-white/40 hover:bg-white/30 flex items-center gap-2 h-8"
-              >
-                <ScrollText className="w-4 h-4" />
-                Download Income Statement
-              </Button>
-            </div>
+            <h1 className="text-2xl md:text-3xl font-bold">
+              Teacher Dashboard
+            </h1>
           </div>
           <div className="flex gap-2">
             <a href="/">
